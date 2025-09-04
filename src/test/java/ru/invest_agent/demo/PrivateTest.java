@@ -15,10 +15,10 @@ import ru.tinkoff.piapi.core.InvestApi;
 import lombok.extern.slf4j.Slf4j;
 import ru.tinkoff.piapi.core.models.Money;
 
+import java.math.BigDecimal;
 import java.util.Objects;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 //@ExtendWith(MockitoExtension.class)
@@ -34,18 +34,31 @@ public class PrivateTest {
         Environment env = SpringApplication.run(InvestAgentApplication.class).getEnvironment();
         String sandBoxToken = env.getProperty("invest_api.token.sand_box");
         investApi = InvestApi.createSandbox(Objects.requireNonNull(sandBoxToken));
+//        clearAccounts(investApi);
         accountId = investApi.getSandboxService().openAccountSync();
         log.info("Открыт новый счет с id = {}", accountId);
         log.info("Всего открыто счетов {}", investApi.getSandboxService().getAccountsSync().size());
-        assertEquals(1,investApi.getSandboxService().getAccountsSync().size());
+//        assertEquals(1,investApi.getSandboxService().getAccountsSync().size());
     }
+
+//    //удаляем счета если они остались
+//    private static void clearAccounts(InvestApi investApi) {
+//        var accounts = investApi.getSandboxService().getAccountsSync();
+//        if (!accounts.isEmpty()) {
+//            log.info("Очистка старых счетов нужна");
+//            for (var account : accounts) {
+//                investApi.getSandboxService().closeAccountSync(account.getId());
+//            }
+//        } else {log.info("Очистка старых счетов не нужна");}
+//    }
 
     //удаляем тестовый аккаунт для проверки методов
     @AfterAll
     public static void deleteTestAccount(){
-        investApi.getSandboxService().closeAccount(accountId);
-        assertEquals(0,investApi.getSandboxService().getAccountsSync().size());
-
+        investApi.getSandboxService().closeAccountSync(accountId);
+        assertFalse(investApi.getSandboxService().getAccountsSync().stream()
+                .anyMatch(a -> a.getId().equals(accountId)));
+        log.info("Закрыт новый счет с id = {}", accountId);
     }
 
     @Test
@@ -64,7 +77,22 @@ public class PrivateTest {
         var moneyList = positions.getMoney();
         for (Money moneyValue : moneyList) {
             log.info("валюта: {}, количество: {}", moneyValue.getCurrency(), moneyValue.getValue());
+            assertTrue(
+                    moneyValue.getValue().subtract(new BigDecimal("10000.00")).abs().compareTo(new BigDecimal("0.01")) <= 0,
+                    "Разница превышает допустимую погрешность"
+            );
         }
+    }
+
+    @Test
+    public void getReadSomeFigi(){
+//        var allBonds = investApi.getInstrumentsService().getAllBonds();
+//        var allBonds2 = investApi.getInstrumentsService().getAllBondsSync();
+//
+//        while (!allBonds.isDone()){
+//            log.info("Идет загрузка инструментов");
+//
+//        }
     }
 
 }

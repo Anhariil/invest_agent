@@ -17,7 +17,7 @@ public class ChartController {
         int[] values = {30, 50, 20};
         String[] colors = {"#FF6384", "#36A2EB", "#FFCE56"};
 
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper(); // оборачиваем объект для чтения js в jsp
         model.addAttribute("labels", mapper.writeValueAsString(labels));
         model.addAttribute("values", mapper.writeValueAsString(values));
         model.addAttribute("colors", mapper.writeValueAsString(colors));
@@ -30,4 +30,6 @@ public class ChartController {
     public String ping() {
         return "pong";
     }
+
+
 }

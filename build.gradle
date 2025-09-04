@@ -19,6 +19,8 @@ repositories {
 }
 
 dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+
     implementation 'org.springframework.boot:spring-boot-starter-web'
 //    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
@@ -32,6 +34,12 @@ dependencies {
 
     implementation 'org.wiremock.integrations:wiremock-spring-boot:3.10.0'
     implementation 'com.squareup.okhttp3:okhttp:5.0.0'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+    testCompileOnly 'org.projectlombok:lombok:1.18.30'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.30'
 
     // JSTL для работы с тегами в JSP
     implementation 'jakarta.servlet.jsp.jstl:jakarta.servlet.jsp.jstl-api:3.0.0'
@@ -47,9 +55,6 @@ dependencies {
 
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-
-    testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
 }

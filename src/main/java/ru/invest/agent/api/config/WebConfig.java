@@ -1,4 +1,4 @@
-package ru.invest_agent.demo.config;
+package ru.invest.agent.api.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

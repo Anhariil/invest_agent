@@ -1,0 +1,41 @@
+#spring:
+#  mvc:
+#    view:
+#      prefix: /WEB-INF/views/
+#      suffix: .jsp
+
+invest_api:
+  token:
+    # ${INVEST_API_TOKEN_SANDBOX} # передаем через параметры при запуске приложения например
+    # java -jar app.jar --spring.profiles.active=prod \
+    #  -DPROD_BOT_TOKEN=your_prod_token \
+    sand_box: ${INVEST_API_TOKEN_SANDBOX}
+    account_id: ${TINKOFF_DEFAULT_ACCOUNT_ID}
+
+telegram:
+  chat:
+    id: ${TELEGRAM_CHAT_ID} # TODO берем из бд, не храним в колнфиге? оставить свой как дефолт?
+    error_id: ${TELEGRAM_ERROR_CHAT_ID:-${TELEGRAM_CHAT_ID}}  #TODO мой чат айди для увед и ошибок
+  bot:
+    token: ${TELEGRAM_BOT_TOKEN} #сейчас старый не тот бот для теста
+    # Напишите @BotFather в Telegram /n Используйте команду /newbot и следуйте инструкциям /n Получите API-токен вида 1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  data:
+    mongodb:
+      uri: ${DB_MONGO_URL}
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+
+      # Отключаем DEBUG логи для Apache HTTP Client
+    org.apache.hc: WARN
+    org.apache.http: WARN
+
+file:
+  path: ${FILE_PATH}

@@ -1,4 +1,4 @@
-package ru.invest_agent.demo.utils;
+package ru.invest.agent.api.utils;
 
 import org.springframework.beans.factory.annotation.Value;
 import ru.tinkoff.piapi.core.InvestApi;

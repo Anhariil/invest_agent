@@ -1,14 +1,18 @@
-package ru.invest_agent.demo.controller;
+package ru.invest.agent.api.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
+@Slf4j
 public class ChartController {
+
 
     @GetMapping("/chart")
     public String showChart(Model model) throws JsonProcessingException {

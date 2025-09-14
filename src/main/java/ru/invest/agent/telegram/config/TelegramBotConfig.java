@@ -27,8 +27,7 @@ public class TelegramBotConfig {
     }
 
     @Bean
-    public ApplicationRunner botInitializer(BotService botService,
-                                            @Value("${telegram.chat.error_id}") String chatId) {
+    public ApplicationRunner botInitializer(BotService botService) {
         return args -> {
 
             try {

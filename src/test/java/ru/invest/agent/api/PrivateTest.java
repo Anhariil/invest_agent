@@ -2,6 +2,7 @@ package ru.invest.agent.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.common.util.StringUtils;
 import net.bytebuddy.build.HashCodeAndEqualsPlugin;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -55,7 +56,6 @@ public class PrivateTest {
     @BeforeAll
     public void createTestAccount(){
 
-        log.info(accountId);
         Objects.requireNonNull(sandBoxToken, "Sandbox token must not be null");
         Objects.requireNonNull(accountId, "Account ID must not be null");
 
@@ -92,7 +92,7 @@ public class PrivateTest {
         for (Money moneyValue : moneyList) {
 
             investApi.getSandboxService().payIn(accountId, MoneyValue.newBuilder()
-                    .setUnits(moneyValue.getValue().longValue())
+                    .setUnits(- moneyValue.getValue().longValue())
                     .setCurrency(moneyValue.getCurrency()).build());
         }
     }
@@ -135,7 +135,9 @@ public class PrivateTest {
         log.info("время последней свечи {}", timestampToString(priceList.getLast().getTime()));
 
         String json =  JsonConverter.convertObjectToJson(priceList);
-        JsonFileWriter.saveJson(json,testPath + "/priceList.json");
+        if (StringUtils.isNotBlank(json)) {
+            JsonFileWriter.saveJson(json, testPath + "/priceList.json");
+        }
 
         AdvancedPredictionService predictionService = new AdvancedPredictionService();
         double[] shortTermPrices = priceList.stream().limit(10)

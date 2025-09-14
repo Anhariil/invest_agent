@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Portfolio Chart</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+<body>
+<div layout:fragment="content">
+    <h1 class="mb-4">Portfolio Distribution</h1>
+
+    <!-- Отладочная информация -->
+    <div class="alert alert-info">
+        <p>Labels: <span th:text="${labels}"></span></p>
+        <p>Values: <span th:text="${values}"></span></p>
+        <p>Colors: <span th:text="${colors}"></span></p>
+    </div>
+
+    <div th:if="${layout}">
+        <p>Layout is applied</p>
+    </div>
+    <div th:unless="${layout}">
+        <p>Layout is NOT applied</p>
+    </div>
+
+    <div class="chart-container" style="width: 80%; margin: 0 auto;">
+        <canvas id="investmentChart"></canvas>
+    </div>
+
+    <div layout:fragment="scripts">
+
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                const ctx = document.getElementById('investmentChart').getContext('2d');
+
+                const labels = /*[[${labels}]]*/ ['Категория A', 'Категория B'];
+                const values = /*[[${values}]]*/ [30, 50];
+                const colors = /*[[${colors}]]*/ ['#FF6384', '#36A2EB'];
+
+                console.log("Labels:", labels);
+                console.log("Values:", values);
+                console.log("Colors:", colors);
+
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: colors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: 'Investment Portfolio Distribution'
+                            }
+                        }
+                    }
+                });
+            });
+        </script>
+    </div>
+</div>
+
+</body>
+</html>

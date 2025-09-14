@@ -4,6 +4,8 @@
 #      prefix: /WEB-INF/views/
 #      suffix: .jsp
 
+
+
 invest_api:
   token:
     # ${INVEST_API_TOKEN_SANDBOX} # передаем через параметры при запуске приложения например
@@ -14,20 +16,37 @@ invest_api:
 
 telegram:
   chat:
-    id: ${TELEGRAM_CHAT_ID} # TODO берем из бд, не храним в колнфиге? оставить свой как дефолт?
+    id: ${TELEGRAM_CHAT_ID} # TODO берем из бд, не храним в конфиге? оставить свой как дефолт?
     error_id: ${TELEGRAM_ERROR_CHAT_ID:-${TELEGRAM_CHAT_ID}}  #TODO мой чат айди для увед и ошибок
   bot:
     token: ${TELEGRAM_BOT_TOKEN} #сейчас старый не тот бот для теста
     # Напишите @BotFather в Telegram /n Используйте команду /newbot и следуйте инструкциям /n Получите API-токен вида 1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi
 
 spring:
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
+
   data:
     mongodb:
       uri: ${DB_MONGO_URL}
+
+  thymeleaf:
+#    cache: false # false Для разработки
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+
+  banner:
+    charset: UTF-8
+    web:
+      encoding:
+        charset: UTF-8
+        force: true
+        enabled: true
 
 logging:
   level:
@@ -38,4 +57,36 @@ logging:
     org.apache.http: WARN
 
 file:
+  encoding: UTF-8
   path: ${FILE_PATH}
+
+---
+# Профиль dev
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    root: DEBUG
+    ru.invest.agent: TRACE
+#    org.springframework: DEBUG
+#    org.springframework.data: DEBUG
+#    org.mongodb.driver: DEBUG
+#    org.hibernate.SQL: DEBUG
+#    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+---
+# Профиль prod
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    root: WARN
+    ru.invest.agent: INFO
+    org.springframework: WARN
+    org.mongodb.driver: WARN

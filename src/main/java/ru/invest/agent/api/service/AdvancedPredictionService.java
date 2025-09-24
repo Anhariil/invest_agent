@@ -1,19 +1,23 @@
 package ru.invest.agent.api.service;
 
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.math3.fitting.PolynomialCurveFitter;
 import org.apache.commons.math3.fitting.WeightedObservedPoints;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.springframework.stereotype.Service;
+import ru.invest.agent.api.model.TwoValues;
 
 import java.util.Arrays;
 
+@Slf4j
 @Service
-public class AdvancedPredictionService {
+public class AdvancedPredictionService { //TODO компонент
 
     // Основной метод прогнозирования
     public double[] predictWithAdaptiveModel(double[] prices, int forecastSteps) {
         final double[] trends = polynomialRegression(prices, 3, forecastSteps);
-        final double[] smoothed = exponentialSmoothing(prices, 0.7 , forecastSteps);
+        final double[] smoothed = exponentialSmoothing(prices, 0.7, forecastSteps);
 
         // Рассчитываем волатильность для адаптивного веса
         final double volatility = calculateVolatility(prices);
@@ -53,7 +57,7 @@ public class AdvancedPredictionService {
 
     // Адаптивное экспоненциальное сглаживание
     private double[] exponentialSmoothing(double[] prices, double baseGamma, int forecastSteps) {
-        if (prices.length < forecastSteps-1 ) return Arrays.copyOf(prices, forecastSteps);
+        if (prices.length < forecastSteps - 1) return Arrays.copyOf(prices, forecastSteps);
 
         double[] forecasts = new double[forecastSteps];
         double smoothed = prices[0];
@@ -82,5 +86,27 @@ public class AdvancedPredictionService {
         }
 
         return new StandardDeviation().evaluate(returns);
+    }
+
+    public TwoValues<Integer,Double> getRiseTrendingValues(double[] prices){
+        TwoValues<Integer,Double> result = new TwoValues<>(0,prices[0]);
+        for (int i = 1; i < prices.length; i++) {
+            if (prices[i] > result.getSecondValue()){
+                result.setFirstValue(i);
+                result.setSecondValue(prices[i]);
+            }
+        }
+        return result;
+    }
+
+    public TwoValues<Integer,Double> getFallTrendingValues(double[] prices){
+        TwoValues<Integer,Double> result = new TwoValues<>(0,prices[0]);
+        for (int i = 1; i < prices.length; i++) {
+            if (prices[i] < result.getSecondValue()){
+                result.setFirstValue(i);
+                result.setSecondValue(prices[i]);
+            }
+        }
+        return result;
     }
 }

@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
+import ru.invest.agent.api.BaseTest;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,10 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest()
 @ActiveProfiles("test")
-public class JsonFileWriterTest {
-
-    @Value("${file.path}")
-    private String testPath;
+public class JsonFileTest extends BaseTest {
 
     @Test
     public void should_pass_write_file() throws IOException {
@@ -25,7 +22,7 @@ public class JsonFileWriterTest {
         String filePath = testPath + "test.json";
 
         // Выполнение
-        boolean result = JsonFileWriter.saveJson(testJson, filePath);
+        boolean result = JsonFile.saveJson(testJson, filePath);
         assertTrue(result);
 
         Path path = Path.of(filePath);
@@ -39,7 +36,7 @@ public class JsonFileWriterTest {
         String filePath = testPath + "test";
 
         // Выполнение
-        boolean result = JsonFileWriter.saveJson(testJson, filePath);
+        boolean result = JsonFile.saveJson(testJson, filePath);
         assertTrue(result);
 
         Path path = Path.of(filePath);
@@ -53,7 +50,7 @@ public class JsonFileWriterTest {
         String filePath = testPath + "some/wrong/path" + "test.json";
 
         // Выполнение
-        boolean result = JsonFileWriter.saveJson(testJson, filePath);
+        boolean result = JsonFile.saveJson(testJson, filePath);
         assertFalse(result);
 
         Path path = Path.of(filePath);

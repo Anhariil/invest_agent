@@ -20,7 +20,8 @@ telegram:
     error_id: ${TELEGRAM_ERROR_CHAT_ID:-${TELEGRAM_CHAT_ID}}  #TODO мой чат айди для увед и ошибок
   bot:
     token: ${TELEGRAM_BOT_TOKEN} #сейчас старый не тот бот для теста
-    # Напишите @BotFather в Telegram /n Используйте команду /newbot и следуйте инструкциям /n Получите API-токен вида 1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi
+    # напишите @BotFather в Telegram /n Используйте команду /newbot и следуйте инструкциям /n Получите API-токен вида 1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi
+    start.event.message: false
 
 spring:
 
@@ -56,6 +57,10 @@ logging:
     org.apache.hc: WARN
     org.apache.http: WARN
 
+    # смотрим логи по монге
+    org.springframework.data.mongodb.core: DEBUG
+    org.mongodb.driver: DEBUG
+
 file:
   encoding: UTF-8
   path: ${FILE_PATH}
@@ -90,3 +95,5 @@ logging:
     ru.invest.agent: INFO
     org.springframework: WARN
     org.mongodb.driver: WARN
+
+telegram.bot.start.event.message: true

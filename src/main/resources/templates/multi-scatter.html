@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Multiple Scatter Plots</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="chart-container">
+        <canvas id="multiScatterChart"></canvas>
+    </div>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('multiScatterChart').getContext('2d');
+
+            // Создаем наборы данных
+            const datasets = [
+                /*[[${dataset1}]]*/ {},
+                /*[[${dataset2}]]*/ {}
+            ].map(dataset => {
+                const xValues = JSON.parse(dataset.xValues || '[1,1,2,3,5,7]');
+                const yValues = JSON.parse(dataset.yValues || '[1,2,3,4,5,6]');
+
+                return {
+                    label: dataset.label || 'Dataset',
+                    data: xValues.map((x, i) => ({x, y: yValues[i]})),
+                    backgroundColor: dataset.color || 'rgba(0, 0, 0, 0.7)',
+                    pointRadius: 6
+                };
+            });
+
+            new Chart(ctx, {
+                type: 'scatter',
+                data: { datasets },
+                options: {
+                    scales: {
+                        x: { type: 'linear', title: { display: true, text: 'X Axis' } },
+                        y: { title: { display: true, text: 'Y Axis' } }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

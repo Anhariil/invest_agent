@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Multiple Scatter Plots</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="chart-container">
+    <canvas id="multiScatterChart"></canvas>
+</div>
+
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('multiLineChart').getContext('2d');
+
+        const datasets = [
+            {
+                label: 'Линия 1',
+                data: JSON.parse(/*[[${line1}]]*/ '[]'),
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.3
+            },
+            {
+                label: 'Линия 2',
+                data: JSON.parse(/*[[${line2}]]*/ '[]'),
+                borderColor: 'rgb(255, 99, 132)',
+                tension: 0.3
+            }
+        ];
+
+        new Chart(ctx, {
+            type: 'line',
+            data: { datasets },
+            options: {
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: { display: true, text: 'Ось X' }
+                    },
+                    y: {
+                        title: { display: true, text: 'Ось Y' }
+                    }
+                }
+            }
+        });
+    });
+</script></body>
+</html>

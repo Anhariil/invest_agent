@@ -18,6 +18,8 @@ public class TelegramBotConfig {
     private String chatId;
     @Value("${telegram.bot.token}")
     private String token;
+    @Value("${telegram.bot.start.event.message}")
+    private boolean isEventMessage;
 //    @Value("${telegram.bot.user_name}")
 //    private String userName;
 
@@ -35,7 +37,9 @@ public class TelegramBotConfig {
                 botsApi.registerBot(botService);
                 log.info("Telegram бот успешно зарегистрирован");
 
-                botService.sendNotification(chatId, "🤖 Бот инициализирован и готов к работе!");
+                if (isEventMessage) {
+                    botService.sendNotification(chatId, "🤖 Бот инициализирован и готов к работе!");
+                }
             } catch (TelegramApiException e) {
                 log.error("Ошибка регистрации Telegram бота: {}", e.getMessage());
             }

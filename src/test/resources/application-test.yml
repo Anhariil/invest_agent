@@ -27,7 +27,9 @@ spring:
 
 logging:
   level:
-    root: ${LOG_LEVEL:INFO}
+    root: INFO
+    ru.invest.agent.api: DEBUG
+
       # Отключаем DEBUG логи для Apache HTTP Client
     org.apache.hc: WARN
     org.apache.http: WARN

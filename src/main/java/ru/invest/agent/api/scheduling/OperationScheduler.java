@@ -1,16 +1,15 @@
 package ru.invest.agent.api.scheduling;
 
 import jakarta.annotation.PostConstruct;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import ru.invest.agent.api.constant.AssetsConstant;
 import ru.invest.agent.api.constant.TradeStatus;
 import ru.invest.agent.api.model.InvestAccount;
 import ru.invest.agent.api.model.User;
-import ru.invest.agent.api.repository.UserRepository;
 import ru.invest.agent.api.service.InvestApiService;
 import ru.invest.agent.api.service.UserService;
 import ru.invest.agent.api.utils.InvestApiUtils;
@@ -23,29 +22,31 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+@Slf4j
 @Service
+@ConditionalOnProperty(prefix = "agent.scheduler.operation", name = "enabled", havingValue = "true")
 public class OperationScheduler {
 
-    private static final Logger log = LoggerFactory.getLogger(OperationScheduler.class);
     @Autowired
     private UserService userService;
+    @Getter
     private final List<User> users = new CopyOnWriteArrayList<>();
 
     @PostConstruct
     public void init() {
         updateUsersList(); // Первоначальная загрузка после запуска приложения
-        log.info("Запуск щедуллера OperationScheduler");
+        log.info("Запуск OperationScheduler");
     }
 
     @Scheduled(fixedDelay = 60_000) // 1000 = 1sec //не работает без @EnableScheduling на App
     public void analysisMarket() {
         log.debug("Начало работы analysisMarket");
-        List<String> tokens = new ArrayList<>(users.size());
+//        List<String> tokens = new ArrayList<>(users.size());
         for (User user : users) {
             log.debug("Операции по счету для '{}'", user.getName());
             String token = user.getToken();
             TradeStatus tradeStatus = user.getTradeStatus();
-            tokens.add(token);
+//            tokens.add(token);
             InvestApi investApi = InvestApiUtils.createInvestApi(token,tradeStatus);
 
             if (Objects.nonNull(investApi)) {
@@ -83,4 +84,5 @@ public class OperationScheduler {
         log.debug("Успешное завершение работы updateUsersList, новое кол-во активных пользователей: '{}'", users.size());
 
     }
+
 }

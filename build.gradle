@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'ru.invest.agent'
-version '0.0.1-SNAPSHOT'
+version '0.0.2-SNAPSHOT'
 
 java {
     toolchain {
@@ -69,6 +69,7 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework:spring-webflux' // Для MockMvc
+    testImplementation 'org.testcontainers:junit-jupiter'
 
 }
 

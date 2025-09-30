@@ -26,5 +26,5 @@ public abstract class BaseTest {
     public String testPath;
 
     @MockitoBean
-    private UserRepository userRepository;
+    private UserRepository userRepository; // mock чтобы при запуске приложения не падали по созданию подключения к монго
 }

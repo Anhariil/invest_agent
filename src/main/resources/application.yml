@@ -19,7 +19,7 @@ telegram:
     id: ${TELEGRAM_CHAT_ID} # TODO берем из бд, не храним в конфиге? оставить свой как дефолт?
     error_id: ${TELEGRAM_ERROR_CHAT_ID:-${TELEGRAM_CHAT_ID}}  #TODO мой чат айди для увед и ошибок
   bot:
-    token: ${TELEGRAM_BOT_TOKEN} #сейчас старый не тот бот для теста
+    token: ${TELEGRAM_BOT_TOKEN} #сейчас старый  бот для теста
     # напишите @BotFather в Telegram /n Используйте команду /newbot и следуйте инструкциям /n Получите API-токен вида 1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi
     start.event.message: false
 

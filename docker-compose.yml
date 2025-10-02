@@ -11,6 +11,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_DB_NAME}
+#      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DB_NAME}?authSource=admin
     volumes:
       - mongodb_data:/data/db
     healthcheck:
@@ -19,6 +20,8 @@ services:
       timeout: 120s
       retries: 5
       start_period: 40s
+    networks:
+      - invest-network
 
   app:
     build: .
@@ -28,17 +31,24 @@ services:
       - "8080:8080"
     env_file: .env # Загружаем переменные для приложения
     environment:
-      SPRING_DATA_MONGODB_HOST: mongodb
-      SPRING_DATA_MONGODB_PORT: 27017
-      SPRING_DATA_MONGODB_DATABASE: ${MONGO_DB_NAME:-invest_agent_db}
-      SPRING_DATA_MONGODB_USERNAME: ${MONGO_ROOT_USER:-admin}
-      SPRING_DATA_MONGODB_PASSWORD: ${MONGO_ROOT_PASSWORD:-adminpassword}
-      SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE: admin
+#      SPRING_DATA_MONGODB_HOST: mongodb
+#      SPRING_DATA_MONGODB_PORT: 27017
+#      SPRING_DATA_MONGODB_DATABASE: ${MONGO_DB_NAME:-invest_agent_db}
+#      SPRING_DATA_MONGODB_USERNAME: ${MONGO_ROOT_USER:-admin}
+#      SPRING_DATA_MONGODB_PASSWORD: ${MONGO_ROOT_PASSWORD:-adminpassword}
+#      SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE: admin
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DB_NAME}?authSource=admin
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
     depends_on:
       mongodb:
         condition: service_healthy
     restart: on-failure
+    networks:
+      - invest-network
 
 volumes:
   mongodb_data:
+
+networks:
+  invest-network:
+    driver: bridge

@@ -25,10 +25,10 @@ telegram:
 
 spring:
 
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+#  datasource:
+#    url: ${DB_URL}
+#    username: ${DB_USER}
+#    password: ${DB_PASSWORD}
 
   data:
     mongodb:
@@ -58,8 +58,8 @@ logging:
     org.apache.http: WARN
 
     # смотрим логи по монге
-    org.springframework.data.mongodb.core: DEBUG
-    org.mongodb.driver: DEBUG
+    org.springframework.data.mongodb.core: INFO
+    org.mongodb.driver: INFO
 
 file:
   encoding: UTF-8
@@ -78,6 +78,7 @@ logging:
     ru.invest.agent: TRACE
 #    org.springframework: DEBUG
 #    org.springframework.data: DEBUG
+#    org.springframework.data.mongodb.core: DEBUG
 #    org.mongodb.driver: DEBUG
 #    org.hibernate.SQL: DEBUG
 #    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

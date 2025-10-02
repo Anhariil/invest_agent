@@ -1,0 +1,38 @@
+#spring:
+#  mvc:
+#    view:
+#      prefix: /WEB-INF/views/
+#      suffix: .jsp
+
+invest_api:
+  token:
+    sand_box: ${INVEST_API_TOKEN_SANDBOX}
+    account_id: 98763ce3-f83d-40c3-8aab-93b3455ab7fe
+
+telegram:
+  chat:
+    id: #${TELEGRAM_CHAT_ID}
+    error_id: #${TELEGRAM_ERROR_CHAT_ID:-${TELEGRAM_CHAT_ID}}
+  bot:
+    token: #${TELEGRAM_BOT_TOKEN}
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  data:
+    mongodb:
+      uri: ${DB_MONGO_URL}
+
+logging:
+  level:
+    root: INFO
+    ru.invest.agent.api: DEBUG
+
+      # Отключаем DEBUG логи для Apache HTTP Client
+    org.apache.hc: WARN
+    org.apache.http: WARN
+
+file:
+  path: ${TEST_FILE_PATH}

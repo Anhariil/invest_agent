@@ -42,6 +42,12 @@ public class ApiController {
         return ResponseEntity.ok(user);
     }
 
+    @GetMapping("/users")
+    public ResponseEntity<List<User>> getAllUsers(){
+        List<User> user = userService.findAll();
+        return ResponseEntity.ok(user);
+    }
+
     @PostMapping("/user")
     public ResponseEntity<User> createUser(@RequestBody User user){
         User response = userService.createUser(user);

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import ru.invest.agent.api.constant.TradeStatus;
 import ru.invest.agent.api.model.InvestAccount;
 import ru.invest.agent.api.model.User;
@@ -18,13 +19,12 @@ import ru.tinkoff.piapi.core.InvestApi;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Slf4j
 @Service
-@ConditionalOnProperty(prefix = "agent.scheduler.operation", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "invest_api.scheduler.operation", name = "enabled", havingValue = "true")
 public class OperationScheduler {
 
     @Autowired
@@ -43,7 +43,7 @@ public class OperationScheduler {
         log.debug("Начало работы analysisMarket");
 //        List<String> tokens = new ArrayList<>(users.size());
         for (User user : users) {
-            log.debug("Операции по счету для '{}'", user.getName());
+            log.debug("Операции по счету для клиента: '{}'", user.getName());
             String token = user.getToken();
             TradeStatus tradeStatus = user.getTradeStatus();
 //            tokens.add(token);
@@ -54,14 +54,19 @@ public class OperationScheduler {
                 // TODO находить аккаунты, передавать параметры для работы, если аккаунт не активин - уведомления юзеру?
                 // TODO передавать List<InvestAccount> ?
                 List<InvestAccount> accounts = user.getAccounts();
-                if (accounts.isEmpty()){
-                    //грузим аккаунты из тинь и заполняем
+                if (CollectionUtils.isEmpty(accounts)){
+                    //грузим аккаунты из тинь и заполняем в бд
                     log.debug("Не нашли счетов в бд - смотрим в Т");
+
+                    accounts = new ArrayList<>();
                     var investAccounts = investApi.getUserService().getAccountsSync();
                     for (Account account : investAccounts){
                         accounts.add(new InvestAccount().createFromTinkoff(account));
                     }
-                    log.debug("Добавили '{}' счетов для работы", accounts.size());
+                    log.debug("Добавили '{}' счет(ов) для работы", accounts.size());
+
+                    userService.save(user);
+                    log.debug("Обновили счета для клиента: '{}'", user.getName());
                 }
 
                 InvestApiService investApiService = new InvestApiService(investApi);

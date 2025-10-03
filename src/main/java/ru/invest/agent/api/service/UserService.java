@@ -10,7 +10,6 @@ import ru.invest.agent.api.repository.UserRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -24,7 +23,7 @@ public class UserService {
         User user = new User();
         user.setPhone(phone);
         user.setCreateDateTime(Instant.now());
-        return userRepository.save(user);
+        return save(user);
     }
 
     public User createUser(String phone, long chatId) {
@@ -32,7 +31,7 @@ public class UserService {
         user.setPhone(phone);
         user.setTelegramChatId(chatId);
         user.setCreateDateTime(Instant.now());
-        return userRepository.save(user);
+        return save(user);
     }
 
     //TODO проверять на то что юзер уник и не перетирает данные
@@ -43,7 +42,7 @@ public class UserService {
         }
 
         user.setCreateDateTime(Instant.now());
-        return userRepository.save(user);
+        return save(user);
     }
 
     public List<User> findAll() {
@@ -59,9 +58,13 @@ public class UserService {
     public User updateUser(User user) {
         if ((!user.getId().isEmpty() && Objects.nonNull(findById(user.getId())))
             || (!user.getPhone().isEmpty() && Objects.nonNull(findByPhone(user.getPhone())))) {
-            return userRepository.save(user);
+            return save(user);
         }
 
         return createUser(user);
+    }
+
+    public User save(User user){
+        return userRepository.save(user);
     }
 }

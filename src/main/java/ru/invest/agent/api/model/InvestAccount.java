@@ -1,5 +1,6 @@
 package ru.invest.agent.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.protobuf.Timestamp;
 import lombok.Data;
 import ru.invest.agent.api.constant.AssetsConstant;
@@ -13,12 +14,16 @@ import java.util.List;
 public class InvestAccount {
     private boolean isAvailable;
     private String id; // номер аккаунта для связи
+    @JsonIgnore
     private Timestamp createDateTime;
+    @JsonIgnore
     private Timestamp closeDateTime;
+    @JsonIgnore
     private Timestamp lastUpdateDateTime;
     private boolean isMarginTrading = false;
     private Assets assets = new Assets();
     private List<AssetsConstant> availableAssets = new ArrayList<>(); // выбранные услуги для торговли
+//    @JsonIgnore
     private List<Money> monies;
 
     public InvestAccount createFromTinkoff(Account tinkoffAccount) {

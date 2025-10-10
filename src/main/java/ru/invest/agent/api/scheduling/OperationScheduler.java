@@ -20,6 +20,7 @@ import ru.tinkoff.piapi.core.InvestApi;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.TimeZone;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Slf4j
@@ -35,15 +36,18 @@ public class OperationScheduler {
     @PostConstruct
     public void init() {
         updateUsersList(); // Первоначальная загрузка после запуска приложения
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Moscow"));
         log.info("Запуск OperationScheduler");
     }
 
-    @Scheduled(fixedDelay = 60_000) // 1000 = 1sec //не работает без @EnableScheduling на App
+    //время работы биржи в будни - 6.50/23.50 - надо проверить что все акции так и побольше узнать
+    @Scheduled(cron = "0 * 7-21 * * MON-FRI")
+//    @Scheduled(fixedDelay = 1) // для теста ставим так
     public void analysisMarket() {
-        log.debug("Начало работы analysisMarket");
+        log.info("Начало работы analysisMarket");
 //        List<String> tokens = new ArrayList<>(users.size());
         for (User user : users) {
-            log.debug("Операции по счету для клиента: '{}'", user.getName());
+            log.debug("Обработка клиента: '{}'", user.getName());
             String token = user.getToken();
             TradeStatus tradeStatus = user.getTradeStatus();
 //            tokens.add(token);
@@ -63,6 +67,7 @@ public class OperationScheduler {
                     for (Account account : investAccounts){
                         accounts.add(new InvestAccount().createFromTinkoff(account));
                     }
+                    user.setAccounts(accounts);
                     log.debug("Добавили '{}' счет(ов) для работы", accounts.size());
 
                     userService.save(user);
@@ -73,11 +78,13 @@ public class OperationScheduler {
                 // Просмотр и обновление текущих заявок (отмена заявки, пересмотр цены продажи/покупки с учетом нового анализа)
                 investApiService.createOrUpdateOrders(accounts, tradeStatus);
             }
+            log.debug("Завершение работы с клиентом: '{}'", user.getName());
         }
-        log.debug("Успешное завершение работы analysisMarket");
+        log.info("Успешное завершение работы analysisMarket");
     }
 
-    @Scheduled(fixedDelay = 600_000)
+    //раз в час обновляем пользователей (переделать через кэш?)
+    @Scheduled(fixedDelay = 3600_000)
     public void updateUsersList() {
         log.debug("Начало работы updateUsersList");
 

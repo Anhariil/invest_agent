@@ -36,6 +36,7 @@ spring:
   data:
     mongodb:
       uri: ${DB_MONGO_URL}
+      auto-index-creation: true
 
   thymeleaf:
 #    cache: false # false Для разработки
@@ -82,7 +83,7 @@ logging:
 #    org.springframework: DEBUG
 #    org.springframework.data: DEBUG
 #    org.springframework.data.mongodb.core: DEBUG
-#    org.mongodb.driver: DEBUG
+    org.mongodb.driver: DEBUG
 #    org.hibernate.SQL: DEBUG
 #    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     com.fasterxml.jackson.databind: DEBUG

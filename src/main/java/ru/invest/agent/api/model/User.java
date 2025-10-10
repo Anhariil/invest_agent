@@ -2,7 +2,9 @@ package ru.invest.agent.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import ru.invest.agent.api.constant.TradeStatus;
@@ -14,6 +16,8 @@ import java.util.List;
 @Data
 @Document(collection = "users")
 @JsonIgnoreProperties(ignoreUnknown = true)
+@NoArgsConstructor
+@AllArgsConstructor
 public class User
 //        implements Serializable
 {

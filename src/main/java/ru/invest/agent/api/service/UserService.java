@@ -45,13 +45,9 @@ public class UserService {
         return save(user);
     }
 
-    public List<User> findAll() {
-        return userRepository.findAll();
-    }
+    public List<User> findAll() {return userRepository.findAll();}
 
-    public List<User> findAllActive() {
-        return userRepository.findByUserStatus(UserStatus.ACTIVE);
-    }
+    public List<User> findAllActive() {return userRepository.findByUserStatus(UserStatus.ACTIVE);}
 
     public User findById(String id) {return userRepository.findById(id).orElse(null);}
 

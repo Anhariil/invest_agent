@@ -44,8 +44,8 @@ public class ApiController {
 
     @GetMapping("/users")
     public ResponseEntity<List<User>> getAllUsers(){
-        List<User> user = userService.findAll();
-        return ResponseEntity.ok(user);
+        List<User> users = userService.findAll();
+        return ResponseEntity.ok(users);
     }
 
     @PostMapping("/user")

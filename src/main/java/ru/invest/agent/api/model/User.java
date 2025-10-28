@@ -1,5 +1,7 @@
 package ru.invest.agent.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -11,7 +13,10 @@ import java.util.List;
 
 @Data
 @Document(collection = "users")
-public class User {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class User
+//        implements Serializable
+{
     @Id
     private String id;
     private String token;
@@ -21,6 +26,7 @@ public class User {
     private String middleName;
     private Long telegramChatId;
     private List<InvestAccount> accounts;
+    @JsonIgnore //TODO json бесится с этих полей - поменять формат или использовать UserDTO
     private Instant createDateTime;
     private UserStatus userStatus = UserStatus.NEW;
     private TradeStatus tradeStatus = TradeStatus.SANDBOX;

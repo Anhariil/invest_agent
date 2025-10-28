@@ -1,5 +1,6 @@
 package ru.invest.agent.api.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.invest.agent.api.constant.UserStatus;
@@ -8,22 +9,21 @@ import ru.invest.agent.api.repository.UserRepository;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 
+@Slf4j
 @Service
 public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    public Optional<User> findByPhone(String phone) {
-        return userRepository.findByPhone(phone);
-    }
+    public User findByPhone(String phone) {return userRepository.findByPhone(phone).orElse(null);}
 
     public User createUser(String phone) {
         User user = new User();
         user.setPhone(phone);
         user.setCreateDateTime(Instant.now());
-        return userRepository.save(user);
+        return save(user);
     }
 
     public User createUser(String phone, long chatId) {
@@ -31,7 +31,18 @@ public class UserService {
         user.setPhone(phone);
         user.setTelegramChatId(chatId);
         user.setCreateDateTime(Instant.now());
-        return userRepository.save(user);
+        return save(user);
+    }
+
+    //TODO проверять на то что юзер уник и не перетирает данные
+    public User createUser(User user) {
+        if (user.getPhone().isBlank()){
+            log.error("У пользователя отсутствует телефон");
+            throw new IllegalArgumentException("Отсутствует телефон");
+        }
+
+        user.setCreateDateTime(Instant.now());
+        return save(user);
     }
 
     public List<User> findAll() {
@@ -40,5 +51,20 @@ public class UserService {
 
     public List<User> findAllActive() {
         return userRepository.findByUserStatus(UserStatus.ACTIVE);
+    }
+
+    public User findById(String id) {return userRepository.findById(id).orElse(null);}
+
+    public User updateUser(User user) {
+        if ((!user.getId().isEmpty() && Objects.nonNull(findById(user.getId())))
+            || (!user.getPhone().isEmpty() && Objects.nonNull(findByPhone(user.getPhone())))) {
+            return save(user);
+        }
+
+        return createUser(user);
+    }
+
+    public User save(User user){
+        return userRepository.save(user);
     }
 }

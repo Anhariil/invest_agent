@@ -62,18 +62,20 @@ public class InvestApiService {
             throw new RuntimeException("Ошибка соединения"); // TODO ошибки моего приложения
         }
         for (InvestAccount account : accounts) {
-
             String accountId = account.getId();
             log.debug("Начинаем работать с аккаунтом '{}'", accountId);
-            List<OrderState> orderStates = investApi.getOrdersService().getOrdersSync(accountId);
 
             // TODO лист цен?
 //            var lastPrices = investApi.getMarketDataService().getLastPricesSync(orderStates.stream().map(OrderState::getFigi).toList());
-            //TODO обновление текущих заявок
-//            updateOrderStates(orderStates) // void или лист в ответ? // int с кол-вом заявок?
 
-            int assetsOnWorkCount = 0;
-            assetsOnWorkCount = investApi.getOperationsService().getPortfolioSync(accountId).getPositions().size(); //TODO проверить (надо исключать валюту)
+            // обновляем текущие заявки
+            // void или лист в ответ? // String figiToExclude ?
+            List<OrderState> orderStates = updateOrderStates(accountId);
+
+            int assetsOnWorkCount = (int) investApi.getOperationsService().getPortfolioSync(accountId).getPositions()
+                    .stream().filter(p -> !p.getInstrumentType().equals("currency")).count();
+
+            List<Position> positions = updateCurrentPositions(accountId);
 
             if (isAccountHasNoMoney(accountId)) {
                 log.debug("На счету не достаточно средств для любых операций");
@@ -83,7 +85,7 @@ public class InvestApiService {
             // не работаем с инструментами, на которые уже выставлены сделки
             String figiToExclude = orderStates.stream().map(OrderState::getFigi).reduce("", (a, b) -> a + b + ";")
                     // и с инструментами, которые уже присутствуют в портфеле см assetsOnWorkCount
-                    + investApi.getOperationsService().getPortfolioSync(accountId).getPositions().stream().filter(p -> !p.getInstrumentType().equals("currency")).map(Position::getFigi).reduce("", (a, b) -> a + b + ";");
+                    + positions.stream().map(Position::getFigi).reduce("", (a, b) -> a + b + ";");
 
             //работаем только с акциями пока что
             List<Share> shares = getAllAvailableShares().stream()
@@ -103,20 +105,10 @@ public class InvestApiService {
 
                 var minPrice = doubleToQuotation(quotationToDouble(lastPrice.getPrice()) * lot);
                 if (isAccountHasMoneyToBuy(investApi, accountId, minPrice)) {
+                    log.debug("Проверяем перспективность инструмента");
                     long quantity = getQuantity(investApi, accountId, minPrice);
 
-                    double[] lastFigiPrices = getHistoricCandleList(investApi, figi).stream()
-                            .limit(60).map(HistoricCandle::getClose)
-                            .map(InvestApiService::quotationToDouble)
-                            // разворачиваем обратно чтобы значения были от -60 до 0 по шкале времени
-                            .toList().reversed().stream()
-                            .flatMapToDouble(DoubleStream::of)
-                            .toArray();
-                    if (lastFigiPrices.length < 60) {
-                        log.warn("По инструменту недостаточно данных для работы,тикет: '{}', получено свечей: '{}'",
-                                share.getTicker(), lastFigiPrices.length);
-                        break; // должны выйти из if
-                    }
+                    double[] lastFigiPrices = getFigiLastPrices(figi);
                     double[] predictPrices = advancedPredictionService.predictWithAdaptiveModel(lastFigiPrices, 10);
 
                     // смотреть макс предсказанное значение? фиксировать тренд?
@@ -125,16 +117,16 @@ public class InvestApiService {
 
                     //растущий тренд - покупаем
 //                    if (trends[0].getFirstValue() > trends[1].getFirstValue()){ //TODO ??
-                    if (trends[0].getSecondValue() / lastFigiPrices[lastFigiPrices.length - 1] > MIN_VALUABLE_RATE) {
+                    if (isRisingTrend(trends, lastFigiPrices[lastFigiPrices.length - 1])) {
                         log.debug("Выставляем заявку на покупку");
                         //Выставляем заявку на покупку
                         createBestPriceOrder(investApi, accountId, figi, quantity, OrderDirection.ORDER_DIRECTION_BUY);
                         //Выставляем заявку на продажу по лимитной цене //TODO перенести в работу с активами?
-                        Quotation sellingPrice = doubleToQuotation(trends[0].getSecondValue());
                         //TODO что делать если прогноз пошел вниз? во время работы с открытыми заказами смотреть отклонение от цели?
-                        createLimitOrder(investApi, accountId, figi, quantity, sellingPrice, OrderDirection.ORDER_DIRECTION_SELL);
+                        createLimitOrder(investApi, accountId, figi, quantity,
+                                doubleToQuotation(trends[0].getSecondValue()), OrderDirection.ORDER_DIRECTION_SELL);
                         assetsOnWorkCount++;
-                    } else if (lastFigiPrices[lastFigiPrices.length - 1] / trends[1].getSecondValue() > MIN_VALUABLE_RATE) {
+                    } else if (isFallingTrend(trends, lastFigiPrices[lastFigiPrices.length - 1])) {
                         //TODO шортить можно только с маржиналкой, надо разбираться
                         log.debug("Выставляем заявку на продажу (Шутка. Пока ничего не делаем)");
 //                        assetsOnWorkCount++;
@@ -153,7 +145,7 @@ public class InvestApiService {
 
                 if (assetsOnWorkCount >= MAX_ASSETS_TO_WORK) {
                     log.debug("Достигли максимального кол-ва инструментов для обработки");
-                    break;// должны выйти из цикла по figi
+                    break; // должны выйти из цикла по figi
                 }
             }
 //            var minPriceIncrement = api.getInstrumentsService().getInstrumentByFigiSync(figi).getMinPriceIncrement();
@@ -164,6 +156,105 @@ public class InvestApiService {
             break; //TODO пока делаем только для одного аккаунта
         }
     }
+
+    // TODO обрабатываем имеющиеся на счету инструменты
+    private List<Position> updateCurrentPositions(String accountId) {
+        List<Position> positions = investApi.getOperationsService().getPortfolioSync(accountId).getPositions().stream()
+                .filter(p -> !p.getInstrumentType().equals("currency")).toList();
+        for (Position position: positions){
+            log.debug("Начинаем работать с инструментом '{}', типа '{}'", position.getFigi(), position.getInstrumentType());
+            // работа хде
+            log.debug("Завершаем работу с инструментом");
+        }
+        return positions;
+    }
+
+    /**
+     * Текущая цена больше предсказанной минимальной цены ?
+     * @param trends - смотрим trends[1].getSecondValue()
+     * @param lastFigiPrice - переданная цена (текущая)
+     */
+    private boolean isFallingTrend(TwoValues<Integer, Double>[] trends, double lastFigiPrice) {
+        return lastFigiPrice / trends[1].getSecondValue() > MIN_VALUABLE_RATE;
+    }
+
+    private boolean isRisingTrend(TwoValues<Integer, Double>[] trends, double lastFigiPrice) {
+        return trends[0].getSecondValue() / lastFigiPrice > MIN_VALUABLE_RATE;
+    }
+
+    private double[] getFigiLastPrices(String figi) {
+        double[] lastFigiPrices = getHistoricCandleList(investApi, figi).stream()
+                .limit(60).map(HistoricCandle::getClose)
+                .map(InvestApiService::quotationToDouble)
+                // разворачиваем обратно чтобы значения были от -60 до 0 по шкале времени
+                .toList().reversed().stream()
+                .flatMapToDouble(DoubleStream::of)
+                .toArray();
+        if (lastFigiPrices.length < 60) {
+            log.warn("По инструменту недостаточно данных для работы, figi: '{}', получено свечей: '{}'",
+                    figi, lastFigiPrices.length);
+            throw new RuntimeException("По инструменту недостаточно данных для работы");
+        }
+        return lastFigiPrices;
+    }
+
+    /**
+     * Метод обрабатывает выставленные заявки и возвращает новый лист с заявками, которые не были исполнены
+     */
+    public List<OrderState> updateOrderStates(String accountId) {
+        List<OrderState> orderStates = investApi.getOrdersService().getOrdersSync(accountId);
+        for (OrderState orderState : orderStates) {
+            String orderId = orderState.getOrderId();
+            log.debug("Обрабатываем заявку '{}'", orderId);
+
+            String figi = orderState.getFigi();
+            double orderPrice = moneyValueToDouble(orderState.getAveragePositionPrice());
+            OrderDirection orderDirection = orderState.getDirection();
+            long quantity = orderState.getLotsRequested();
+
+            double[] lastFigiPrices = getFigiLastPrices(figi);
+            double[] predictPrices = advancedPredictionService.predictWithAdaptiveModel(lastFigiPrices, 10);
+            TwoValues<Integer, Double>[] trends = new TwoValues[]{advancedPredictionService.getRiseTrendingValues(predictPrices),
+                    advancedPredictionService.getFallTrendingValues(predictPrices)
+            };
+
+
+            if (orderDirection.equals(OrderDirection.ORDER_DIRECTION_BUY)) {
+                // заявка на покупку - если цена продолжает снижаться по прогнозу - понижаем целевую цену
+                // если цена растет - форсим покупку по текущей цене
+                if (isFallingTrend(trends, orderPrice)) {
+                    log.debug("Понижаем целевую цену заявки");
+                    replaceOrder(accountId, trends[1].getSecondValue(), orderState);
+                } else if (isRisingTrend(trends, orderPrice)) {
+                    log.debug("Отменяем заявку и покупаем инструмент по текущей цене");
+                    investApi.getOrdersService().cancelOrder(accountId, orderId);
+                    createBestPriceOrder(investApi, accountId, figi, quantity, OrderDirection.ORDER_DIRECTION_BUY);
+                }
+
+            } else if (orderDirection.equals(OrderDirection.ORDER_DIRECTION_SELL)) {
+                // заявка на продажу - если цена продолжает расти по прогнозу - повышаем целевую цену
+                // если цена падает - форсим продажу по текущей цене
+                if (isRisingTrend(trends, orderPrice)) {
+                    log.debug("Повышаем целевую цену заявки");
+                    replaceOrder(accountId, trends[0].getSecondValue(), orderState);
+                } else if (isFallingTrend(trends, orderPrice)) {
+                    log.debug("Отменяем заявку и продаем инструмент по текущей цене");
+                    investApi.getOrdersService().cancelOrder(accountId, orderId);
+                    createBestPriceOrder(investApi, accountId, figi, quantity, OrderDirection.ORDER_DIRECTION_SELL);
+                }
+
+            } else {
+                log.error("Не ожидаемое направление заявки, id = '{}' ", orderState.getOrderId());
+                break;
+            }
+
+            log.debug("Завершаем обрабатывать заявку '{}'", orderId);
+        }
+
+        // возвращаем актуальный набор заявок
+        return investApi.getOrdersService().getOrdersSync(accountId);
+    }
+
 
     public static boolean isAccountHasNoMoney(InvestApi investApi, String accountId) {
         return !isAccountHasMoney(investApi, accountId);
@@ -176,7 +267,6 @@ public class InvestApiService {
     /**
      * Считаем что на счету достаточно средств, если нашли валюту РФ и отношение {@code валюта / стоимость портфеля}
      * больше чем {@code MIN_MONEY_VALUE_FOR_BUYING}
-     *
      */
     public static boolean isAccountHasMoney(InvestApi investApi, String accountId) {
         List<Money> monies = getAccountsMoneyList(investApi, accountId);
@@ -209,7 +299,6 @@ public class InvestApiService {
 
     /**
      * Возвращает стоимость портфеля в рублях
-     *
      */
     public static Money getAccountsTotalAmount(InvestApi investApi, String accountId) {
         return investApi.getOperationsService().getPortfolioSync(accountId).getTotalAmountPortfolio();
@@ -249,7 +338,6 @@ public class InvestApiService {
 
     /**
      * Возвращает отсортированный по цене инструмента список цен акций
-     *
      */
     public static List<LastPrice> getSharesLastPrice(InvestApi investApi, String figiList) {
         if (CollectionUtils.isEmpty(allAvailableSharesLastPrice)) {
@@ -272,7 +360,6 @@ public class InvestApiService {
 
     /**
      * Лист цен инструмента. Даты идут из настоящего в прошлое, время -3 от МСК
-     *
      */
     public static List<HistoricCandle> getHistoricCandleList(InvestApi investApi, String figi, CandleInterval candleInterval, ChronoUnit chronoUnit, long amountToSubtract) {
         return investApi.getMarketDataService().getCandlesSync(figi, Instant.now().minus(amountToSubtract, chronoUnit),
@@ -301,8 +388,25 @@ public class InvestApiService {
                 .divide(BigDecimal.valueOf(priceInDouble), 0, RoundingMode.DOWN).longValue();
     }
 
-    //TODO вспомогательный метод, вынести бы отсюда
+    //TODO вспомогательный метод, вынести бы отсюда в Utils
     public static double quotationToDouble(Quotation price) {
+        double returnValue = price.getUnits();
+        int number = price.getNano();
+
+        if (number == 0) {
+            return returnValue;
+        }
+
+        // Шаг 1: Определяем количество цифр
+        int numDigits = (int) Math.log10(Math.abs(number)) + 1;
+        // Шаг 2: Рассчитываем делитель
+        double divisor = Math.pow(10, numDigits);
+        // Шаг 3: Делим с сохранением знака
+        return returnValue + (number / divisor);
+    }
+
+    //TODO вспомогательный метод, вынести бы отсюда в Utils
+    private double moneyValueToDouble(MoneyValue price) {
         double returnValue = price.getUnits();
         int number = price.getNano();
 
@@ -320,7 +424,6 @@ public class InvestApiService {
 
     //TODO вспомогательный метод, вынести бы отсюда
     public static Quotation doubleToQuotation(double price) {
-//        log.debug("price: {}",price);
         long units = (long) price;
         int nano = 0;
 
@@ -345,6 +448,32 @@ public class InvestApiService {
         return Quotation.newBuilder().setUnits(units).setNano(nano).build();
     }
 
+    //TODO вспомогательный метод, вынести бы отсюда
+    public static MoneyValue doubleToMoneyValue(double price) {
+        long units = (long) price;
+        int nano = 0;
+
+        String str = Double.toString(price);
+        int dotIndex = str.indexOf('.');
+        int eIndex = str.indexOf('E');
+
+        if (dotIndex != -1) {
+            // Определяем длину дробной части
+            int length = (eIndex == -1) ? str.length() - dotIndex - 1 : eIndex - dotIndex - 1;
+
+            // Извлекаем и преобразуем
+            String fractionalStr = str.substring(dotIndex + 1, eIndex == -1 ? str.length() : eIndex);
+            if (length < 9 && !fractionalStr.equals("0")) { // длина nano должна быть 9 символов
+                fractionalStr = fractionalStr + "0".repeat(9 - length);
+            } else if (length > 9) {
+                fractionalStr = fractionalStr.substring(0, 9);
+            }
+            nano = Integer.parseInt(fractionalStr);
+        }
+
+        return MoneyValue.newBuilder().setUnits(units).setNano(nano).build();
+    }
+
     public static String createLimitOrder(InvestApi investApi, String accountId, String figi, long quantity, Quotation price, OrderDirection orderDirection) {
         //Выставляем заявку по лимитной цене
         var orderId = investApi.getOrdersService()
@@ -355,7 +484,7 @@ public class InvestApiService {
         var order = investApi.getOrdersService().getOrdersSync(accountId).stream()
                 .filter(el -> orderId.equals(el.getOrderId())).findFirst().orElse(null);
         if (Objects.nonNull(order)) {
-            log.debug("заявка с id {} есть в списке активных заявок, параметры заявки -- инструмент: {}, цена: {}, " +
+            log.debug("Заявка с id {} есть в списке активных заявок, параметры заявки -- инструмент: {}, цена: {}, " +
                     "количество: {}, направление заявки {}", orderId, figi, quotationToDouble(price), quantity, orderDirection);
         } else {
             log.warn("заявки с id {} нет в списке активных заявок!", orderId);
@@ -376,5 +505,14 @@ public class InvestApiService {
                 "количество: {}, направление заявки {}", figi, "???" /*quotationToDouble(price)*/, quantity, orderDirection);
 
         return orderId;
+    }
+
+    public String replaceOrder(String accountId, double newPrice, OrderState orderState) {
+        var postOrderResponse = investApi.getOrdersService().replaceOrderSync(accountId, orderState.getLotsRequested(), //TODO проверить orderState.getLotsRequested()
+                doubleToQuotation(newPrice), UUID.randomUUID().toString(), orderState.getOrderId(), null);
+        log.debug("Обновление параметров выставлено. Новые параметры заявки -- инструмент: {}, цена: {}, " +
+                "количество: {}, направление заявки {}", postOrderResponse.getFigi(), newPrice,
+                postOrderResponse.getLotsRequested(), postOrderResponse.getDirection());
+        return postOrderResponse.getOrderId();
     }
 }

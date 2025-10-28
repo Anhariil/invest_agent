@@ -2,6 +2,8 @@ package ru.invest.agent.telegram.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -13,11 +15,13 @@ import ru.invest.agent.api.model.User;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
 @Slf4j
 @Service
+@Profile("!test")
 public class BotService extends TelegramLongPollingBot { //TODO logs
 
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+7\\d{10}$");
@@ -92,8 +96,8 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
         }
 
         // Проверка существования пользователя
-        Optional<User> existingUser = userService.findByPhone(phone);
-        if (existingUser.isPresent()) {
+        User existingUser = userService.findByPhone(phone);
+        if (Objects.nonNull(existingUser)) {
             sendTextMessage(chatId, "ℹ️ Пользователь с телефоном " + phone + " уже существует.");
         } else {
             // Создание нового пользователя

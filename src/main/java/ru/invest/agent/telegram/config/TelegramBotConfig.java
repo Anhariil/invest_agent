@@ -3,14 +3,21 @@ package ru.invest.agent.telegram.config;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
+import org.telegram.telegrambots.meta.api.methods.menubutton.SetChatMenuButton;
+import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
+import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
+import org.telegram.telegrambots.meta.api.objects.menubutton.MenuButton;
+import org.telegram.telegrambots.meta.api.objects.menubutton.MenuButtonCommands;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import ru.invest.agent.telegram.service.BotService;
+
+import java.util.List;
 
 @Slf4j
 @Configuration
@@ -34,12 +41,11 @@ public class TelegramBotConfig {
     @Bean
     public ApplicationRunner botInitializer(BotService botService) {
         return args -> {
-
             try {
                 TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
                 botsApi.registerBot(botService);
+                setCommands(botService);
                 log.info("Telegram бот успешно зарегистрирован");
-
                 if (isEventMessage) {
                     botService.sendNotification(chatId, "🤖 Бот инициализирован и готов к работе!");
                 }
@@ -47,6 +53,22 @@ public class TelegramBotConfig {
                 log.error("Ошибка регистрации Telegram бота: {}", e.getMessage());
             }
         };
+    }
+
+    private void setCommands(BotService botService) throws TelegramApiException {
+        List<BotCommand> commands = List.of(
+                new BotCommand("/start", "Запуск бота"),
+                new BotCommand("/portfolio", "Мой портфель"),
+                new BotCommand("/analytics", "Аналитика рынка"),
+                new BotCommand("/create", "Создание аккаунта"),
+                new BotCommand("/ping", "Проверка доступности")
+                );
+
+        SetMyCommands request = new SetMyCommands();
+        request.setCommands(commands);
+        request.setScope(new BotCommandScopeDefault());
+        request.setLanguageCode("ru");
+        botService.execute(request);
     }
 
 }

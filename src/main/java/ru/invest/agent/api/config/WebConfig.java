@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
+    // для работы с UI если он будет (мелочь надо бы, типа графиков сделать)
     @Bean
     public ViewResolver jspViewResolver() {
         InternalResourceViewResolver resolver = new InternalResourceViewResolver();
@@ -26,6 +27,7 @@ public class WebConfig implements WebMvcConfigurer {
         return resolver;
     }
 
+    //TODO проверить нужна ли эиа шляпа
     @Bean
     public MappingJackson2HttpMessageConverter jsonConverter() {
         ObjectMapper objectMapper = new ObjectMapper();

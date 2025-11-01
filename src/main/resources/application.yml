@@ -4,8 +4,6 @@
 #      prefix: /WEB-INF/views/
 #      suffix: .jsp
 
-
-
 invest_api:
   token:
     # ${INVEST_API_TOKEN_SANDBOX} # передаем через параметры при запуске приложения например

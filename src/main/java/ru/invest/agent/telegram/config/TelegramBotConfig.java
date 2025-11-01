@@ -8,11 +8,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
-import org.telegram.telegrambots.meta.api.methods.menubutton.SetChatMenuButton;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
-import org.telegram.telegrambots.meta.api.objects.menubutton.MenuButton;
-import org.telegram.telegrambots.meta.api.objects.menubutton.MenuButtonCommands;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import ru.invest.agent.telegram.service.BotService;
@@ -47,7 +47,8 @@ public class TelegramBotConfig {
                 setCommands(botService);
                 log.info("Telegram бот успешно зарегистрирован");
                 if (isEventMessage) {
-                    botService.sendNotification(chatId, "🤖 Бот инициализирован и готов к работе!");
+                    ReplyKeyboardMarkup keyboardMarkup = createReplyKeyboardMarkup(botService);
+                    botService.sendNotification(chatId,keyboardMarkup, "🤖 Бот инициализирован и готов к работе!");
                 }
             } catch (TelegramApiException e) {
                 log.error("Ошибка регистрации Telegram бота: {}", e.getMessage());
@@ -70,5 +71,24 @@ public class TelegramBotConfig {
         request.setLanguageCode("ru");
         botService.execute(request);
     }
+
+    private ReplyKeyboardMarkup createReplyKeyboardMarkup(BotService botService){
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("Аналитика");
+        row1.add("Портфель");
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("Настройки");
+
+        ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
+        keyboard.setKeyboard(List.of(row1, row2));
+        keyboard.setResizeKeyboard(true);
+        keyboard.setOneTimeKeyboard(true);
+        keyboard.setInputFieldPlaceholder("Выберите действие...");
+
+        return keyboard;
+    }
+
+
 
 }

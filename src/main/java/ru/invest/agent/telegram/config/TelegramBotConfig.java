@@ -10,13 +10,13 @@ import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import ru.invest.agent.telegram.service.BotService;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -47,8 +47,9 @@ public class TelegramBotConfig {
                 setCommands(botService);
                 log.info("Telegram бот успешно зарегистрирован");
                 if (isEventMessage) {
-                    ReplyKeyboardMarkup keyboardMarkup = createReplyKeyboardMarkup(botService);
-                    botService.sendNotification(chatId,keyboardMarkup, "🤖 Бот инициализирован и готов к работе!");
+//                    ReplyKeyboardMarkup keyboardMarkup = createReplyKeyboardMarkup(botService);
+//                    botService.sendNotification(chatId, keyboardMarkup, "🤖 Бот инициализирован и готов к работе!");
+                    botService.sendNotification(chatId, "🤖 Бот инициализирован и готов к работе!");
                 }
             } catch (TelegramApiException e) {
                 log.error("Ошибка регистрации Telegram бота: {}", e.getMessage());
@@ -57,13 +58,10 @@ public class TelegramBotConfig {
     }
 
     private void setCommands(BotService botService) throws TelegramApiException {
-        List<BotCommand> commands = List.of(
-                new BotCommand("/start", "Запуск бота"),
-                new BotCommand("/portfolio", "Мой портфель"),
-                new BotCommand("/analytics", "Аналитика рынка"),
-                new BotCommand("/create", "Создание аккаунта"),
-                new BotCommand("/ping", "Проверка доступности")
-                );
+        List<BotCommand> commands = new ArrayList<>();
+        for (ru.invest.agent.telegram.constant.BotCommand command : ru.invest.agent.telegram.constant.BotCommand.values()){
+            commands.add(new BotCommand(command.getCommand(),command.getDescription()));
+        }
 
         SetMyCommands request = new SetMyCommands();
         request.setCommands(commands);
@@ -72,7 +70,7 @@ public class TelegramBotConfig {
         botService.execute(request);
     }
 
-    private ReplyKeyboardMarkup createReplyKeyboardMarkup(BotService botService){
+    private ReplyKeyboardMarkup createReplyKeyboardMarkup(BotService botService) {
         KeyboardRow row1 = new KeyboardRow();
         row1.add("Аналитика");
         row1.add("Портфель");
@@ -88,7 +86,6 @@ public class TelegramBotConfig {
 
         return keyboard;
     }
-
 
 
 }

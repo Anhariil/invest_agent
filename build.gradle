@@ -60,6 +60,12 @@ dependencies {
 //    implementation 'com.fasterxml.jackson.core:jackson-databind'
 //    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310' // Для поддержки Java 8 Date/Time
 
+    // Для генерации графиков
+    implementation 'org.jfree:jfreechart:1.5.4'
+    // Для работы с изображениями
+    implementation 'org.apache.xmlgraphics:batik-transcoder:1.17'
+    implementation 'org.apache.xmlgraphics:batik-codec:1.17'
+
     // Для работы с .env файлами
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 

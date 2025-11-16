@@ -4,12 +4,17 @@ import lombok.Getter;
 
 @Getter
 public enum BotCommand {
-    INFO("/info", ""),
-    PING("/ping", "Проверка доступности бота"),
-    CREATE("/create", "Создание аккаунта"),
-    DELETE("/delete", "Удаление аккаунта"),
+    //Default commands
     START("/start", "Запуск бота"),
-    CHART_EXAMPLE("/chartExample", "");
+    HELP("/help", "help"),
+    STOP("/stop", "Остановка работы бота"),
+    //Functional commands
+    CREATE("/create", "Создание аккаунта"),
+    SETTINGS("/settings","Настройки аккаунта"),
+    DELETE("/delete", "Удаление аккаунта"),
+    //Test commands
+    PING("/ping", "Проверка доступности бота"),
+    CHART_EXAMPLE("/chartexample", "chartExample");
 
     private final String command;
     private final String description;

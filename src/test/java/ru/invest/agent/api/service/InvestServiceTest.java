@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS) // Разрешаем нестатические @*All
-public class InvestApiServiceTest extends BaseTest {
+public class InvestServiceTest extends BaseTest {
 
 
     @Value("${invest_api.token.sand_box}")

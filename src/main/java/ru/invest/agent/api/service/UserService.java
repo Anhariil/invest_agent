@@ -19,7 +19,7 @@ public class UserService {
 
     public User findByPhone(String phone) {return userRepository.findByPhone(phone).orElse(null);}
 
-    public User findByChatId(String chatId) {return userRepository.findByTelegramChatId(chatId).orElse(null);}
+    public User findByChatId(Long chatId) {return userRepository.findByTelegramChatId(chatId).orElse(null);}
 
     public User createUser(String phone) {
         User user = new User();

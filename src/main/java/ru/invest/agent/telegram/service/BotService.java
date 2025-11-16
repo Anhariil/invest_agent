@@ -23,11 +23,11 @@ import ru.invest.agent.telegram.constant.BotCommand;
 import ru.invest.agent.telegram.constant.InlineButton;
 import ru.invest.agent.telegram.utils.ChartGenerator;
 
+
 import java.io.ByteArrayInputStream;
 import java.util.*;
 import java.util.regex.Pattern;
 
-import static ru.invest.agent.telegram.constant.BotCommand.PING;
 import static ru.invest.agent.telegram.constant.InlineButton.*;
 
 @Slf4j
@@ -42,6 +42,9 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private InvestService investService;
 
     public BotService(String botToken) {
         super(botToken);
@@ -63,11 +66,17 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
             return;
         }
 
+        // Если сообщение не содержит текста - выходим
         if (!update.hasMessage() || !update.getMessage().hasText()) {
             return;
         }
 
-        // Обработка команд / полученного текста
+        // Обработка текстовых команд / полученного текста
+        handleTextCommand(update);
+    }
+
+    private void handleTextCommand(Update update) {
+
         long chatId = update.getMessage().getChatId();
         String messageText = update.getMessage().getText();
         log.debug("сообщение от: '{}',текст: '{}'", chatId, messageText);
@@ -348,16 +357,22 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
         log.debug("Callback от '{}': '{}'", chatId, callbackData);
 
         try {
+            //TODO сделать валидные ответы
             switch (InlineButton.getByName(callbackData)){
                 case PORTFOLIO:
                     // Обработка запроса портфеля
                     String response1 = "Информация о вашем портфеле...";
-                    editMessageText(chatId, messageId, response1); //TODO сделать валидные ответы
+                    editMessageText(chatId, messageId, response1);
                     break;
                 case ANALYTICS:
                     // Обработка аналитики
-                    String response2 = "Аналитические данные...";
+                    String response2 = "Аналитические данные... " + userService.findByChatId(chatId).getName();
+                    response2 += investService.getAnalytics(userService.findByChatId(chatId));
                     sendTextMessage(chatId, response2);
+                    break;
+                case BACK:
+                    break;
+                case SETTINGS:
                     break;
             }
 

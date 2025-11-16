@@ -15,7 +15,7 @@ import java.util.List;
 @Slf4j
 @Validated // для работы паттерна с выбросом ошибки
 @RequestMapping("/api")
-public class ApiController {
+public class InvestApiController {
 
     @Autowired
     private UserService userService;

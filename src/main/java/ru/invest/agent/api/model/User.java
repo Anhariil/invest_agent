@@ -26,6 +26,7 @@ public class User
     private String middleName;
     private Long telegramChatId;
     private List<InvestAccount> accounts;
+    private String mainAccount;
     @JsonIgnore //TODO json бесится с этих полей - поменять формат или использовать UserDTO
     private Instant createDateTime;
     private UserStatus userStatus = UserStatus.NEW;

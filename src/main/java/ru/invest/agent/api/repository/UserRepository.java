@@ -14,5 +14,5 @@ public interface UserRepository extends MongoRepository<User, String>{
 
     List<User> findByUserStatus(UserStatus userStatus);
 
-    Optional<User> findByTelegramChatId(String telegramChatId);
+    Optional<User> findByTelegramChatId(Long telegramChatId);
 }

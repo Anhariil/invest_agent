@@ -19,6 +19,8 @@ import ru.invest.agent.telegram.service.BotService;
 import java.util.ArrayList;
 import java.util.List;
 
+import static ru.invest.agent.telegram.constant.BotCommand.*;
+
 @Slf4j
 @Configuration
 @Profile("!test")
@@ -45,12 +47,12 @@ public class TelegramBotConfig {
                 TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
                 botsApi.registerBot(botService);
                 setCommands(botService);
-                log.info("Telegram бот успешно зарегистрирован");
                 if (isEventMessage) {
 //                    ReplyKeyboardMarkup keyboardMarkup = createReplyKeyboardMarkup(botService);
 //                    botService.sendNotification(chatId, keyboardMarkup, "🤖 Бот инициализирован и готов к работе!");
                     botService.sendNotification(chatId, "🤖 Бот инициализирован и готов к работе!");
                 }
+                log.info("Telegram бот успешно зарегистрирован");
             } catch (TelegramApiException e) {
                 log.error("Ошибка регистрации Telegram бота: {}", e.getMessage());
             }

@@ -19,7 +19,6 @@ import ru.tinkoff.piapi.core.InvestApi;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.TimeZone;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -51,33 +50,32 @@ public class OperationScheduler {
             String token = user.getToken();
             TradeStatus tradeStatus = user.getTradeStatus();
 //            tokens.add(token);
-            InvestApi investApi = InvestApiUtils.createInvestApi(token,tradeStatus);
+            InvestApi investApi = InvestApiUtils.createInvestApi(token, tradeStatus);
 
-            if (Objects.nonNull(investApi)) {
-                log.debug("Успешно подключились");
-                // TODO находить аккаунты, передавать параметры для работы, если аккаунт не активин - уведомления юзеру?
-                // TODO передавать List<InvestAccount> ?
-                List<InvestAccount> accounts = user.getAccounts();
-                if (CollectionUtils.isEmpty(accounts)){
-                    //грузим аккаунты из тинь и заполняем в бд
-                    log.debug("Не нашли счетов в бд - смотрим в Т");
+            log.debug("Успешно подключились");
+            // TODO находить аккаунты, передавать параметры для работы, если аккаунт не активин - уведомления юзеру?
+            // TODO передавать List<InvestAccount> ?
+            List<InvestAccount> accounts = user.getAccounts();
+            if (CollectionUtils.isEmpty(accounts)) {
+                //грузим аккаунты из тинь и заполняем в бд
+                log.debug("Не нашли счетов в бд - смотрим в Т");
 
-                    accounts = new ArrayList<>();
-                    var investAccounts = investApi.getUserService().getAccountsSync();
-                    for (Account account : investAccounts){
-                        accounts.add(new InvestAccount().createFromTinkoff(account));
-                    }
-                    user.setAccounts(accounts);
-                    log.debug("Добавили '{}' счет(ов) для работы", accounts.size());
-
-                    userService.save(user);
-                    log.debug("Обновили счета для клиента: '{}'", user.getName());
+                accounts = new ArrayList<>();
+                var investAccounts = InvestApiUtils.getAccountsList(investApi);
+                for (Account account : investAccounts) {
+                    accounts.add(new InvestAccount().createFromTinkoff(account));
                 }
+                user.setAccounts(accounts);
+                log.debug("Добавили '{}' счет(ов) для работы", accounts.size());
 
-                InvestApiService investApiService = new InvestApiService(investApi);
-                // Просмотр и обновление текущих заявок (отмена заявки, пересмотр цены продажи/покупки с учетом нового анализа)
-                investApiService.createOrUpdateOrders(accounts, tradeStatus);
+                userService.save(user);
+                log.debug("Обновили счета для клиента: '{}'", user.getName());
             }
+
+            InvestApiService investApiService = new InvestApiService(investApi);
+            // Просмотр и обновление текущих заявок (отмена заявки, пересмотр цены продажи/покупки с учетом нового анализа)
+            investApiService.createOrUpdateOrders(accounts, tradeStatus);
+
             log.debug("Завершение работы с клиентом: '{}'", user.getName());
         }
         log.info("Успешное завершение работы analysisMarket");

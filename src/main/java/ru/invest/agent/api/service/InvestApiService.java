@@ -73,8 +73,9 @@ public class InvestApiService {
             // void или лист в ответ? // String figiToExclude ?
             List<OrderState> orderStates = updateOrderStates(accountId);
 
-            int assetsOnWorkCount = (int) investApi.getOperationsService().getPortfolioSync(accountId).getPositions()
-                    .stream().filter(p -> !p.getInstrumentType().equals("currency")).count();
+            int assetsOnWorkCount = (int) getPositionList(accountId).stream()
+                    //не считаем валюту позицией портфеля
+                    .filter(p -> !p.getInstrumentType().equals("currency")).count();
 
             List<Position> positions = updateCurrentPositions(accountId);
 
@@ -158,9 +159,17 @@ public class InvestApiService {
         }
     }
 
+    /**
+     * Получаем список позиций портфеля включая валюту
+     * @param accountId номер счета для поиска
+     */
+    public List<Position> getPositionList(String accountId) {
+        return investApi.getOperationsService().getPortfolioSync(accountId).getPositions();
+    }
+
     // TODO обрабатываем имеющиеся на счету инструменты
     private List<Position> updateCurrentPositions(String accountId) {
-        List<Position> positions = investApi.getOperationsService().getPortfolioSync(accountId).getPositions().stream()
+        List<Position> positions = getPositionList(accountId).stream()
                 .filter(p -> !p.getInstrumentType().equals("currency")).toList();
         for (Position position: positions){
             log.debug("Начинаем работать с инструментом '{}', типа '{}'", position.getFigi(), position.getInstrumentType());
@@ -407,7 +416,7 @@ public class InvestApiService {
     }
 
     //TODO вспомогательный метод, вынести бы отсюда в Utils
-    private double moneyValueToDouble(MoneyValue price) {
+    public static double moneyValueToDouble(MoneyValue price) {
         double returnValue = price.getUnits();
         int number = price.getNano();
 

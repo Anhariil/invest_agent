@@ -17,10 +17,13 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import ru.invest.agent.api.constant.TradeStatus;
+import ru.invest.agent.api.constant.UserStatus;
 import ru.invest.agent.api.model.User;
 import ru.invest.agent.api.service.UserService;
 import ru.invest.agent.telegram.constant.BotCommand;
 import ru.invest.agent.telegram.constant.InlineButton;
+import ru.invest.agent.telegram.exception.InvestServiceException;
 import ru.invest.agent.telegram.utils.ChartGenerator;
 
 
@@ -39,6 +42,8 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
     private static final Map<Long, String> USER_CREATION_STATES = new HashMap<>();
 
     private final String botToken;
+    private final String cancelCreationText = "Отмена";
+    private final String continueCreationText = "";
 
     @Autowired
     private UserService userService;
@@ -82,8 +87,12 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
         log.debug("сообщение от: '{}',текст: '{}'", chatId, messageText);
 
         //Обработка текстовых команд
-        if ("Отмена".equals(messageText) && USER_CREATION_STATES.containsKey(chatId)) {
+        if (cancelCreationText.equals(messageText) && USER_CREATION_STATES.containsKey(chatId)) {
             removeReplyKeyboard(chatId, "❌ Создание пользователя отменено");
+            USER_CREATION_STATES.remove(chatId);
+            return;
+        } else if (continueCreationText.equals(messageText) && USER_CREATION_STATES.containsKey(chatId)){
+            userCreation(update.getMessage());
             USER_CREATION_STATES.remove(chatId);
             return;
         }
@@ -97,6 +106,10 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
                     break;
                 case START:
                     handleStartCommand(chatId);
+                    break;
+                    //TODO
+                case SANDBOX:
+                    startSandboxCreation(chatId);
                     break;
                 case CREATE:
                     startUserCreation(chatId);
@@ -138,6 +151,22 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
     }
 
     private void handleStartCommand(long chatId) {
+        if (userService.findByChatId(chatId) == null){
+            log.debug("Новый пользователь: {}", chatId);
+            //новый пользователь
+            String message = "Добро пожаловать! \n Для работы данного бота необходимо иметь аккаунт в Т Инвестициях и " +
+                    "предоставить данному боту токен для взаимодействия с аккаунтом. Для начала работы воспользуйтесь " +
+                    "командой " + BotCommand.START.getCommand() + " . \n Если у вас еще нет аккаунта или вы просто хотите" +
+                    "посмотреть на работу боту, используйте команду " + BotCommand.SANDBOX.getCommand() ;
+            sendTextMessage(chatId, message);
+            return;
+        }
+
+        setStartMenu(chatId,0);
+    }
+
+    private void setStartMenu(long chatId, int messageId) {
+        //зарегистрированный пользователь
         String message = "Выберите действие:";
         InlineKeyboardMarkup keyboard = createStartInlineKeyboard(chatId);
 
@@ -147,7 +176,11 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
         response.setReplyMarkup(keyboard);
 
         try {
-            execute(response);
+            if (messageId == 0) {
+                execute(response);
+            } else { // Если не новое сообщение, то перезаписываем
+                editMessageText(chatId,messageId,message,keyboard);
+            }
         } catch (TelegramApiException e) {
             log.error("Ошибка отправки инлайн-клавиатуры", e);
         }
@@ -174,6 +207,11 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
         return "some_name"; //TODO где используется?
     }
 
+    private void startSandboxCreation(long chatId){
+        startUserCreation(chatId);
+        USER_CREATION_STATES.put(chatId, "AWAITING_PHONE_SANDBOX");
+    }
+
     private void startUserCreation(long chatId) {
         USER_CREATION_STATES.put(chatId, "AWAITING_PHONE");
 
@@ -182,6 +220,9 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
         keyboardMarkup.setResizeKeyboard(true);
         keyboardMarkup.setOneTimeKeyboard(true);
 
+        // Добавляем клавиатуру
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
         // Создаем кнопку запроса контакта
         KeyboardButton contactButton = new KeyboardButton("Поделиться телефоном");
         contactButton.setRequestContact(true);
@@ -189,21 +230,25 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
         // Создаем ряд и добавляем кнопку
         KeyboardRow row = new KeyboardRow();
         row.add(contactButton);
+        keyboard.add(row);
+
+        //Создаем кнопку продолжения
+        KeyboardRow continueRow = new KeyboardRow();
+        continueRow.add(new KeyboardButton(continueCreationText));
+        keyboard.add(continueRow);
 
         //Создаем кнопку отмены
         KeyboardRow cancelRow = new KeyboardRow();
-        cancelRow.add(new KeyboardButton("Отмена"));
-
-        // Добавляем ряд в клавиатуру
-        List<KeyboardRow> keyboard = new ArrayList<>();
-        keyboard.add(row);
+        cancelRow.add(new KeyboardButton(cancelCreationText));
         keyboard.add(cancelRow);
+
         keyboardMarkup.setKeyboard(keyboard);
 
         // Отправляем сообщение с клавиатурой
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
-        message.setText("Пожалуйста, поделитесь вашим контактом:");
+        message.setText("Пожалуйста, поделитесь вашим контактом: \n Вы можете продолжить без заполнения номера телефона" +
+                "но в этом случае вам может быть недоступна часть функциональности бота");
         message.setReplyMarkup(keyboardMarkup);
 
         try {
@@ -218,7 +263,7 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
         Contact contact = message.getContact();
 
         if (!USER_CREATION_STATES.containsKey(chatId)) {
-            sendTextMessage(chatId, "❌ Запрос телефона не инициирован. Используйте /create");
+            removeReplyKeyboard(chatId, "❌ Запрос телефона не инициирован. Используйте /create");
             return;
         }
 
@@ -231,24 +276,58 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
             return;
         }
 
-        // Создаем пользователя
-        User existingUser = userService.findByPhone(phone);
-        String textMessage;
-        if (existingUser != null) {
-            textMessage = "ℹ️ Пользователь с телефоном уже существует.";
-        } else {
-            User newUser = new User();
-            newUser.setPhone(phone);
-            newUser.setTelegramChatId(chatId);
-            newUser.setName(contact.getFirstName());
-            newUser.setLastName(contact.getLastName());
-            newUser = userService.createUser(newUser);
-            textMessage = "✅ Пользователь " + newUser.getName() + " успешно создан!";
-        }
+        String textMessage = userCreation(message);
 
         // Скрываем клавиатуру
         removeReplyKeyboard(chatId, textMessage);
         USER_CREATION_STATES.remove(chatId);
+    }
+
+    private String userCreation(Message message){
+        Contact contact = message.getContact();
+        Chat chat = message.getChat();
+        Long chatId = message.getChatId();
+        String name, lastName, phone, textMessage;
+        TradeStatus tradeStatus;
+        UserStatus userStatus;
+
+        if (USER_CREATION_STATES.get(chatId).contains("SANDBOX")){
+            tradeStatus = TradeStatus.SANDBOX;
+            userStatus = UserStatus.ACTIVE;
+        } else {
+            tradeStatus = TradeStatus.READ_ONLY;
+            userStatus = UserStatus.NEW;
+        }
+
+        User existingUser;
+
+        if (contact != null) {
+            phone = normalizePhone(contact.getPhoneNumber());
+            name = contact.getFirstName();
+            lastName = contact.getLastName();
+            existingUser = userService.findByPhone(phone);
+        } else {
+            phone = null;
+            name = chat.getFirstName();
+            lastName = chat.getLastName();
+            existingUser = userService.findByChatId(chatId);
+        }
+
+        if (existingUser != null) {
+            textMessage = "ℹ️ Пользователь уже существует.";
+        } else {
+            User newUser = new User();
+            newUser.setPhone(phone);
+            newUser.setTelegramChatId(message.getChatId());
+            newUser.setName(name);
+            newUser.setLastName(lastName);
+            newUser.setTradeStatus(tradeStatus);
+            newUser.setUserStatus(userStatus);
+            newUser = userService.createUser(newUser);
+            textMessage = "✅ Пользователь " + newUser.getName() + " успешно создан!";
+            log.debug("Успешное создание пользователя '{}'", newUser.getId());
+        }
+        return textMessage;
     }
 
     // Метод для скрытия клавиатуры
@@ -305,12 +384,21 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
 
     public InlineKeyboardMarkup createStartInlineKeyboard(long chatId) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
 
-        // Первый ряд кнопок
-        List<InlineKeyboardButton> row1 = new ArrayList<>();
-
-        row1.add(createInlineKeyboardButton(PORTFOLIO));
-        row1.add(createInlineKeyboardButton(ANALYTICS));
+        UserStatus userStatus = userService.findByChatId(chatId).getUserStatus();
+        switch (userStatus){
+            case ACTIVE:
+                List<InlineKeyboardButton> activeRow = new ArrayList<>();
+                activeRow.add(createInlineKeyboardButton(PORTFOLIO));
+                activeRow.add(createInlineKeyboardButton(ANALYTICS));
+                keyboard.add(activeRow);
+            case NEW:
+            default:
+                List<InlineKeyboardButton> defaultRow = new ArrayList<>();
+                defaultRow.add(createInlineKeyboardButton(SETTINGS));
+                keyboard.add(defaultRow);
+        }
 
 //        // Второй ряд кнопок
 //        List<InlineKeyboardButton> row2 = new ArrayList<>();
@@ -327,17 +415,6 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
 //                .webApp(new WebAppInfo("https://trading.invest.ru"))
 //                .build());
 
-        // Третий ряд (одна кнопка)
-        List<InlineKeyboardButton> row3 = new ArrayList<>();
-
-        row3.add(createInlineKeyboardButton(SETTINGS));
-
-        // Собираем все ряды
-        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
-        keyboard.add(row1);
-//        keyboard.add(row2);
-        keyboard.add(row3);
-
         markup.setKeyboard(keyboard);
         return markup;
     }
@@ -353,7 +430,7 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
         String callbackData = callbackQuery.getData();
         long chatId = callbackQuery.getMessage().getChatId();
         Integer messageId = callbackQuery.getMessage().getMessageId();
-
+        User user = userService.findByChatId(chatId);
         log.debug("Callback от '{}': '{}'", chatId, callbackData);
 
         try {
@@ -363,16 +440,42 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
                     // Обработка запроса портфеля
                     String response1 = "Информация о вашем портфеле...";
                     editMessageText(chatId, messageId, response1);
+                    String portfolioResponse;
+                    try {
+                        portfolioResponse = investService.getPortfolio(user);
+                    } catch (InvestServiceException e) {
+                        portfolioResponse = "Ошибка обработки данных. Пожалуйста проверьте заполненность данных главный " +
+                                "аккаунт и наличие счетов в Т банке";
+                        log.error("Ошибка обработки PORTFOLIO",e);
+                    }
+                    sendTextMessage(chatId, portfolioResponse);
                     break;
                 case ANALYTICS:
                     // Обработка аналитики
-                    String response2 = "Аналитические данные... " + userService.findByChatId(chatId).getName();
-                    response2 += investService.getAnalytics(userService.findByChatId(chatId));
-                    sendTextMessage(chatId, response2);
+                    String response2 = "Аналитические данные... " + user.getName();
+                    editMessageText(chatId, messageId, response2);
+                    String analyticsResponse;
+                    try {
+                        analyticsResponse = investService.getAnalytics(user);
+                    } catch (InvestServiceException e) {
+                        analyticsResponse = "Ошибка обработки данных. Пожалуйста проверьте заполненность данных главный " +
+                                "аккаунт и наличие счетов в Т банке";
+                        log.error("Ошибка обработки ANALYTICS",e);
+                    }
+                    sendTextMessage(chatId, analyticsResponse);
                     break;
-                case BACK:
+                case BACK_TO_MAIN:
+                    setStartMenu(chatId,messageId);
                     break;
                 case SETTINGS:
+                    String message = "Ваши текущие настройки " + user.getName() + " :\n" + userService.getSettings(user);
+                    InlineKeyboardMarkup keyboard = createSettingsInlineKeyboard(chatId);
+
+                    try {
+                        editMessageText(chatId,messageId,message,keyboard);
+                    } catch (TelegramApiException e) {
+                        log.error("Ошибка отправки инлайн-клавиатуры для SETTINGS", e);
+                    }
                     break;
             }
 
@@ -384,13 +487,42 @@ public class BotService extends TelegramLongPollingBot { //TODO logs
         }
     }
 
-    private void editMessageText(long chatId, int messageId, String newText) throws TelegramApiException {
+    private InlineKeyboardMarkup createSettingsInlineKeyboard(long chatId) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        row1.add(createInlineKeyboardButton(CHANGE_USER_STATUS));
+        keyboard.add(row1);
+
+        List<InlineKeyboardButton> row2 = new ArrayList<>();
+        row2.add(createInlineKeyboardButton(CHANGE_TRADE_STATUS));
+        keyboard.add(row2);
+
+        List<InlineKeyboardButton> row3 = new ArrayList<>();
+        row3.add(createInlineKeyboardButton(CLOSE_ACCOUNT));
+        row3.add(createInlineKeyboardButton(BACK_TO_MAIN));
+        keyboard.add(row3);
+
+        markup.setKeyboard(keyboard);
+        return markup;
+    }
+
+    private void editMessageText(long chatId, int messageId, String newText, InlineKeyboardMarkup inlineKeyboardMarkup) throws TelegramApiException {
         EditMessageText editMessage = new EditMessageText();
         editMessage.setChatId(String.valueOf(chatId));
         editMessage.setMessageId(messageId);
         editMessage.setText(newText);
+        if(inlineKeyboardMarkup != null) {
+            editMessage.setReplyMarkup(inlineKeyboardMarkup);
+        }
         execute(editMessage);
     }
+
+    private void editMessageText(long chatId, int messageId, String newText) throws TelegramApiException {
+    editMessageText(chatId,messageId,newText,null);
+    }
+
 
     private void answerCallbackQuery(String callbackId) throws TelegramApiException {
         AnswerCallbackQuery answer = new AnswerCallbackQuery();

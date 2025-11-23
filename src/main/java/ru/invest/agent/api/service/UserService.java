@@ -3,9 +3,11 @@ package ru.invest.agent.api.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.invest.agent.api.constant.TradeStatus;
 import ru.invest.agent.api.constant.UserStatus;
 import ru.invest.agent.api.model.User;
 import ru.invest.agent.api.repository.UserRepository;
+import ru.invest.agent.api.utils.InvestApiUtils;
 
 import java.time.Instant;
 import java.util.List;
@@ -38,9 +40,15 @@ public class UserService {
 
     //TODO проверять на то что юзер уник и не перетирает данные
     public User createUser(User user) {
-        if (user.getPhone().isBlank()){
-            log.error("У пользователя отсутствует телефон");
-            throw new IllegalArgumentException("Отсутствует телефон");
+        //Пока возможно создание без ТФ
+//        if (user.getPhone().isBlank()){
+//            log.error("У пользователя отсутствует телефон");
+//            throw new IllegalArgumentException("Отсутствует телефон");
+//        }
+        // для песочницы закидываем дефолтный токен и создаем новый аккаунт
+        if (user.getTradeStatus() == TradeStatus.SANDBOX){
+            user.setToken(InvestApiUtils.getSandboxToken());
+            user.setMainAccount(InvestApiUtils.createTestAccount(user.getToken(), TradeStatus.SANDBOX));
         }
 
         user.setCreateDateTime(Instant.now());
@@ -68,5 +76,14 @@ public class UserService {
 
     public User save(User user){
         return userRepository.save(user);
+    }
+
+    public String getSettings(User user) {
+        return "Номер телефона: " + user.getPhone()
+                + "\n Номер основного счета: " + user.getMainAccount().substring(0,user.getMainAccount().lastIndexOf("-"))+"***"
+                + "\n Название основного счета: " + user.getMainAccountName()
+                + "\n Количество привязанных счетов: " + user.getAccounts().size()
+                + "\n Статус пользователя: " + user.getUserStatus()
+                + "\n Статус торговли бота: " + user.getTradeStatus();
     }
 }

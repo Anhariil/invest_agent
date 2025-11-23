@@ -10,6 +10,7 @@ public enum BotCommand {
     STOP("/stop", "Остановка работы бота"),
     //Functional commands
     CREATE("/create", "Создание аккаунта"),
+    SANDBOX("/sandbox", "Создание аккаунта в песочнице"),
     SETTINGS("/settings","Настройки аккаунта"),
     DELETE("/delete", "Удаление аккаунта"),
     //Test commands

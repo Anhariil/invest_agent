@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS) // Разрешаем нестатические @*All
 public class InvestServiceTest extends BaseTest {
 
-
     @Value("${invest_api.token.sand_box}")
     private String sandBoxToken;
     @Value("${invest_api.token.account_id}")

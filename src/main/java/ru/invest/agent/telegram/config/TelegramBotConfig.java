@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
+import org.telegram.telegrambots.meta.api.methods.description.SetMyDescription;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -32,6 +33,8 @@ public class TelegramBotConfig {
     private String token;
     @Value("${telegram.bot.start.event.message}")
     private boolean isEventMessage;
+    @Value("${telegram.bot.description}")
+    private String botDescription;
 //    @Value("${telegram.bot.user_name}")
 //    private String userName;
 
@@ -47,6 +50,7 @@ public class TelegramBotConfig {
                 TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
                 botsApi.registerBot(botService);
                 setCommands(botService);
+                setDescription(botService);
                 if (isEventMessage) {
 //                    ReplyKeyboardMarkup keyboardMarkup = createReplyKeyboardMarkup(botService);
 //                    botService.sendNotification(chatId, keyboardMarkup, "🤖 Бот инициализирован и готов к работе!");
@@ -57,6 +61,12 @@ public class TelegramBotConfig {
                 log.error("Ошибка регистрации Telegram бота: {}", e.getMessage());
             }
         };
+    }
+
+    private void setDescription(BotService botService) throws TelegramApiException {
+        SetMyDescription setDescription = new SetMyDescription();
+        setDescription.setDescription(botDescription);
+        botService.execute(setDescription);
     }
 
     private void setCommands(BotService botService) throws TelegramApiException {

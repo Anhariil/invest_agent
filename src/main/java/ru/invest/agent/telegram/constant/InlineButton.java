@@ -7,7 +7,11 @@ public enum InlineButton {
     PORTFOLIO("Portfolio", "Портфель 📊"),
     ANALYTICS("Analytics", "Аналитика 📈"),
     SETTINGS("Settings","Настройки ⚙️"),
-    BACK("Back","Назад");
+    SET_TOKEN("SetToken","Ввести токен"),
+    CHANGE_USER_STATUS("ChangeUserStatus","Изменить статус пользователя"),
+    CHANGE_TRADE_STATUS("ChangeTradeStatus","Изменить статус торговли бота"),
+    CLOSE_ACCOUNT("CloseAccount","Удалить аккаунт(не Т а бота)"),
+    BACK_TO_MAIN("BackToMain","Назад");
 
     private final String name;
     private final String label;

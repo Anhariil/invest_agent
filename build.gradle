@@ -5,8 +5,11 @@ plugins {
     id 'jacoco'
 }
 
+// Определяем версию из переменной окружения TAG, с дефолтным значением "latest"
+def appVersion = System.getenv('TAG') ?: "latest"
+
 group 'ru.invest.agent'
-version '0.0.2-SNAPSHOT'
+version = appVersion
 
 java {
     toolchain {

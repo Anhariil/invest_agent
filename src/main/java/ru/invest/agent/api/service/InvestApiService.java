@@ -5,9 +5,9 @@ import org.springframework.util.CollectionUtils;
 import ru.invest.agent.api.constant.TradeStatus;
 import ru.invest.agent.api.model.InvestAccount;
 import ru.invest.agent.api.model.TwoValues;
-import ru.invest.agent.api.utils.InvestApiUtils;
 import ru.tinkoff.piapi.contract.v1.*;
 import ru.tinkoff.piapi.core.InvestApi;
+import ru.tinkoff.piapi.core.exception.ApiRuntimeException;
 import ru.tinkoff.piapi.core.models.Money;
 import ru.tinkoff.piapi.core.models.Position;
 
@@ -35,7 +35,7 @@ public class InvestApiService {
     // TODO надо прицениться
     private static final double MIN_VALUABLE_RATE = 1.005;
     // максимальное количество инструментов для обработки
-    private static final int ASSETS_FROM_TOP_LIMITS = 20;
+    private static final int ASSETS_FROM_TOP_LIMITS = 40;
     private static final int MAX_ASSETS_TO_WORK = 5;
 
     //TODO настроить кэш? все равно данные раз в минуту обновляются
@@ -100,14 +100,14 @@ public class InvestApiService {
             Map<String, LastPrice> sharesLastPriceMap = sharesLastPrice.stream().collect(Collectors.toMap(LastPrice::getFigi, Function.identity()));
             List<String> figs = sharesLastPrice.stream().limit(ASSETS_FROM_TOP_LIMITS).map(LastPrice::getFigi).toList();
             for (String figi : figs) {
-                log.debug("Начинаем работать с инструментом: '{}'", figi);
+//                log.debug("Начинаем работать с инструментом: '{}'", figi);
                 LastPrice lastPrice = sharesLastPriceMap.get(figi);
                 Share share = shares.stream().filter(s -> s.getFigi().equals(figi)).findFirst().orElseThrow();
                 int lot = share.getLot();
 
                 var minPrice = doubleToQuotation(quotationToDouble(lastPrice.getPrice()) * lot);
                 if (isAccountHasMoneyToBuy(investApi, accountId, minPrice)) {
-                    log.debug("Проверяем перспективность инструмента");
+//                    log.debug("Проверяем перспективность инструмента");
                     long quantity = getQuantity(investApi, accountId, minPrice);
 
                     double[] lastFigiPrices = getFigiLastPrices(figi);
@@ -120,7 +120,7 @@ public class InvestApiService {
                     //растущий тренд - покупаем
 //                    if (trends[0].getFirstValue() > trends[1].getFirstValue()){ //TODO ??
                     if (isRisingTrend(trends, lastFigiPrices[lastFigiPrices.length - 1])) {
-                        log.debug("Выставляем заявку на покупку");
+                        log.debug("Выставляем заявку на покупку '{}'", figi);
                         //Выставляем заявку на покупку
                         createBestPriceOrder(investApi, accountId, figi, quantity, OrderDirection.ORDER_DIRECTION_BUY);
                         //Выставляем заявку на продажу по лимитной цене //TODO перенести в работу с активами?
@@ -130,11 +130,11 @@ public class InvestApiService {
                         assetsOnWorkCount++;
                     } else if (isFallingTrend(trends, lastFigiPrices[lastFigiPrices.length - 1])) {
                         //TODO шортить можно только с маржиналкой, надо разбираться
-                        log.debug("Выставляем заявку на продажу (Шутка. Пока ничего не делаем)");
+                        log.debug("Выставляем заявку на продажу '{}' (Шутка. Пока ничего не делаем)", figi);
 //                        assetsOnWorkCount++;
 
                     } else {
-                        log.debug("Не выставляем заявку по инструменту");
+//                        log.debug("Не выставляем заявку по инструменту '{}'", figi);
                     }
 
                 } else {
@@ -143,7 +143,7 @@ public class InvestApiService {
                 }
 
                 //конец?
-                log.debug("Заканчиваем работу с инструментом: '{}'", figi);
+//                log.debug("Заканчиваем работу с инструментом: '{}'", figi);
 
                 if (assetsOnWorkCount >= MAX_ASSETS_TO_WORK) {
                     log.debug("Достигли максимального кол-ва инструментов для обработки");
@@ -161,6 +161,7 @@ public class InvestApiService {
 
     /**
      * Получаем список позиций портфеля включая валюту
+     *
      * @param accountId номер счета для поиска
      */
     public List<Position> getPositionList(String accountId) {
@@ -171,17 +172,37 @@ public class InvestApiService {
     private List<Position> updateCurrentPositions(String accountId) {
         List<Position> positions = getPositionList(accountId).stream()
                 .filter(p -> !p.getInstrumentType().equals("currency")).toList();
-        for (Position position: positions){
-            log.debug("Начинаем работать с инструментом '{}', типа '{}'", position.getFigi(), position.getInstrumentType());
-            // работа хде
-            log.debug("Завершаем работу с инструментом");
+        for (Position position : positions) {
+            String figi = position.getFigi();
+            long quantity = position.getQuantityLots().longValue();
+            double averagePrice = position.getAveragePositionPrice().getValue().doubleValue();
+            double lastPrice = position.getCurrentPrice().getValue().doubleValue();
+            log.debug("Начинаем работать с инструментом в портфеле '{}', типа '{}'", figi, position.getInstrumentType());
+
+            // TODO работа хде
+            // TODO дубль кода!!!
+            double[] lastFigiPrices = getFigiLastPrices(figi);
+            double[] predictPrices = advancedPredictionService.predictWithAdaptiveModel(lastFigiPrices, 10);
+
+            // смотреть макс предсказанное значение? фиксировать тренд?
+            TwoValues<Integer, Double>[] trends = new TwoValues[]{advancedPredictionService.getRiseTrendingValues(predictPrices),
+                    advancedPredictionService.getFallTrendingValues(predictPrices)};
+
+            if (isFallingTrend(trends, lastFigiPrices[lastFigiPrices.length - 1])
+                    || (lastPrice / averagePrice > MIN_VALUABLE_RATE)
+                    || (averagePrice / lastPrice > MIN_VALUABLE_RATE)) {
+                log.debug("Выставляем заявку на продажу");
+                createBestPriceOrder(investApi, accountId, figi, quantity, OrderDirection.ORDER_DIRECTION_SELL);
+            }
+            log.debug("Завершаем работу с инструментом в портфеле '{}'", figi);
         }
         return positions;
     }
 
     /**
      * Текущая цена больше предсказанной минимальной цены ?
-     * @param trends - смотрим trends[1].getSecondValue()
+     *
+     * @param trends        - смотрим trends[1].getSecondValue()
      * @param lastFigiPrice - переданная цена (текущая)
      */
     private boolean isFallingTrend(TwoValues<Integer, Double>[] trends, double lastFigiPrice) {
@@ -504,16 +525,22 @@ public class InvestApiService {
     }
 
     public static String createBestPriceOrder(InvestApi investApi, String accountId, String figi, long quantity, OrderDirection orderDirection) {
-        //Выставляем заявку по лучшей цене
-        var orderId = investApi.getOrdersService()
-                .postOrderSync(figi, quantity, Quotation.newBuilder().build(), orderDirection, accountId, OrderType.ORDER_TYPE_BESTPRICE,
-                        UUID.randomUUID().toString()).getOrderId();
+        String orderId;
+        try {
+            //Выставляем заявку по лучшей цене
+            orderId = investApi.getOrdersService()
+                    .postOrderSync(figi, quantity, Quotation.newBuilder().build(), orderDirection, accountId, OrderType.ORDER_TYPE_BESTPRICE,
+                            UUID.randomUUID().toString()).getOrderId();
 
-        //TODO вытаскивать цену через логи или по инструментам и figi
-        //Заявка по лучшей цене всегда исполняется сразу? а по рынку OrderType.ORDER_TYPE_MARKET ?
-        log.debug("Заявка на покупку по лучшей цене исполнена. Параметры заявки -- инструмент: {}, цена: {}, " +
-                "количество: {}, направление заявки {}", figi, "???" /*quotationToDouble(price)*/, quantity, orderDirection);
-
+            //TODO вытаскивать цену через логи или по инструментам и figi
+            //Заявка по лучшей цене всегда исполняется сразу? а по рынку OrderType.ORDER_TYPE_MARKET ?
+            log.debug("Заявка на покупку по лучшей цене исполнена. Параметры заявки -- инструмент: '{}', цена: '{}', " +
+                    "количество: '{}', направление заявки '{}'", figi, "???" /*quotationToDouble(price)*/, quantity, orderDirection);
+        } catch (ApiRuntimeException e){
+            log.error("Ошибка исполнения заявки по лучшей цене. Параметры заявки -- инструмент: '{}', " +
+                    "количество: '{}', направление заявки '{}'. Текст ошибки '{}'", figi,  quantity, orderDirection, e.getMessage());
+            orderId="";
+        }
         return orderId;
     }
 
@@ -521,7 +548,7 @@ public class InvestApiService {
         var postOrderResponse = investApi.getOrdersService().replaceOrderSync(accountId, orderState.getLotsRequested(), //TODO проверить orderState.getLotsRequested()
                 doubleToQuotation(newPrice), UUID.randomUUID().toString(), orderState.getOrderId(), null);
         log.debug("Обновление параметров выставлено. Новые параметры заявки -- инструмент: {}, цена: {}, " +
-                "количество: {}, направление заявки {}", postOrderResponse.getFigi(), newPrice,
+                        "количество: {}, направление заявки {}", postOrderResponse.getFigi(), newPrice,
                 postOrderResponse.getLotsRequested(), postOrderResponse.getDirection());
         return postOrderResponse.getOrderId();
     }

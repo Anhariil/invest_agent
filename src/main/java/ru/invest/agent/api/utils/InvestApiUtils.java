@@ -10,11 +10,16 @@ import ru.tinkoff.piapi.contract.v1.Account;
 import ru.tinkoff.piapi.contract.v1.MoneyValue;
 import ru.tinkoff.piapi.core.InvestApi;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
 public class InvestApiUtils {
+
+    //TODO проверить баги когда один участник удалил сессию, а второй обращается без проверки на существование
+    private static final Map<String,InvestApi> investApiList = new HashMap<>();
 
     @Value("${invest_api.token.sand_box}")
     private String sandBoxToken;
@@ -26,21 +31,30 @@ public class InvestApiUtils {
             throw new RuntimeException();
         }
 
+        if (investApiList.get(token) != null){
+            return investApiList.get(token);
+        }
+
+        InvestApi investApi;
+
         switch (tradeStatus){
             case SANDBOX -> {
-                return InvestApi.createSandbox(token);
+                investApi = InvestApi.createSandbox(token);
             }
             case READ_ONLY -> {
-                return InvestApi.createReadonly(token);
+                investApi = InvestApi.createReadonly(token);
             }
             case FULL_ACCESS -> {
-                return InvestApi.create(token);
+                investApi = InvestApi.create(token);
             }
             default -> {
                 log.error("Ошибка в типе TradeStatus: '{}'",tradeStatus);
                 throw new RuntimeException();
             }
         }
+
+        investApiList.put(token,investApi);
+        return investApi;
     }
 
     public static List<Account> getAccountsList(InvestApi investApi){
@@ -75,5 +89,10 @@ public class InvestApiUtils {
 
     public static String getSandboxToken(){
         return new InvestApiUtils().sandBoxToken;
+    }
+
+    public static void destroy(String token, int second) {
+        investApiList.get(token).destroy(second);
+        investApiList.remove(token);
     }
 }

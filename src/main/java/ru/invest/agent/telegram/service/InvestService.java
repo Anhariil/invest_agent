@@ -38,7 +38,7 @@ public class InvestService {
         StringBuilder result = new StringBuilder();
         List<Money> moneys = investApiService.getAccountsMoneyList(accountId);
         for (Money money: moneys){
-            result.append(money.getValue())
+            result.append(money.getValue().doubleValue())
                     .append(" ")
                     .append(money.getCurrency())
                     .append("\n");
@@ -79,7 +79,14 @@ public class InvestService {
     private String convertPositionToString(InvestApi investApi, Position position){
         String name = InvestApiUtils.getInstrumentName(investApi, position.getFigi(),
                 AssetsConstant.getAssetsByName(position.getInstrumentType()));
-        double price = position.getQuantity().doubleValue();
+//        double price = position.getQuantity().doubleValue();
+        //TODO Проверить валидность
+        double price;
+        if (position.getInstrumentType().equals("currency")){
+            price = position.getQuantity().doubleValue();
+        } else {
+            price = position.getQuantity().multiply(position.getAveragePositionPrice().getValue()).doubleValue();
+        }
         String currency = position.getCurrentPrice().getCurrency();
         switch (currency){
             case "rub" -> currency = "рублей";

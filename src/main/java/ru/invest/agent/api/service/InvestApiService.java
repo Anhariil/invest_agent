@@ -80,7 +80,7 @@ public class InvestApiService {
             List<Position> positions = updateCurrentPositions(accountId);
 
             if (isAccountHasNoMoney(accountId)) {
-                log.debug("На счету не достаточно средств для любых операций");
+                 log.debug("На счету не достаточно средств для любых операций");
                 break;
             }
 
@@ -99,6 +99,7 @@ public class InvestApiService {
             // преобразуем в Map
             Map<String, LastPrice> sharesLastPriceMap = sharesLastPrice.stream().collect(Collectors.toMap(LastPrice::getFigi, Function.identity()));
             List<String> figs = sharesLastPrice.stream().limit(ASSETS_FROM_TOP_LIMITS).map(LastPrice::getFigi).toList();
+            log.info("Начало работы со списком доступных '{}' активов", figs.size());
             for (String figi : figs) {
 //                log.debug("Начинаем работать с инструментом: '{}'", figi);
                 LastPrice lastPrice = sharesLastPriceMap.get(figi);
@@ -111,6 +112,9 @@ public class InvestApiService {
                     long quantity = getQuantity(investApi, accountId, minPrice);
 
                     double[] lastFigiPrices = getFigiLastPrices(figi);
+                    if (lastFigiPrices == null){
+                        continue; // должны перейти к следующей figi
+                    }
                     double[] predictPrices = advancedPredictionService.predictWithAdaptiveModel(lastFigiPrices, 10);
 
                     // смотреть макс предсказанное значение? фиксировать тренд?
@@ -150,11 +154,8 @@ public class InvestApiService {
                     break; // должны выйти из цикла по figi
                 }
             }
-//            var minPriceIncrement = api.getInstrumentsService().getInstrumentByFigiSync(figi).getMinPriceIncrement();
-//            var price = Quotation.newBuilder().setUnits(lastPrice.getUnits() - minPriceIncrement.getUnits() * 100)
-//                    .setNano(lastPrice.getNano() - minPriceIncrement.getNano() * 100).build();
-//
-//
+            log.info("Завершение работы со списком доступных активов");
+
             break; //TODO пока делаем только для одного аккаунта
         }
     }
@@ -170,6 +171,7 @@ public class InvestApiService {
 
     // TODO обрабатываем имеющиеся на счету инструменты
     private List<Position> updateCurrentPositions(String accountId) {
+        log.info("Начало обработки активов в портфеле");
         List<Position> positions = getPositionList(accountId).stream()
                 .filter(p -> !p.getInstrumentType().equals("currency")).toList();
         for (Position position : positions) {
@@ -182,6 +184,9 @@ public class InvestApiService {
             // TODO работа хде
             // TODO дубль кода!!!
             double[] lastFigiPrices = getFigiLastPrices(figi);
+            if (lastFigiPrices == null) {
+                continue; // переходим к следующей позиции
+            }
             double[] predictPrices = advancedPredictionService.predictWithAdaptiveModel(lastFigiPrices, 10);
 
             // смотреть макс предсказанное значение? фиксировать тренд?
@@ -191,11 +196,18 @@ public class InvestApiService {
             if (isFallingTrend(trends, lastFigiPrices[lastFigiPrices.length - 1])
                     || (lastPrice / averagePrice > MIN_VALUABLE_RATE)
                     || (averagePrice / lastPrice > MIN_VALUABLE_RATE)) {
-                log.debug("Выставляем заявку на продажу");
-                createBestPriceOrder(investApi, accountId, figi, quantity, OrderDirection.ORDER_DIRECTION_SELL);
+                if (quantity > 0) {
+                    log.debug("Выставляем заявку на продажу");
+                    createBestPriceOrder(investApi, accountId, figi, quantity, OrderDirection.ORDER_DIRECTION_SELL);
+                } else { // TODO для штук меньше 0 нужна норм логика, откуда получили это значение?
+                    log.warn("Покупка акций которые шортим, хотя шорт был выключен");
+                    log.debug("Выставляем заявку на покупку");
+                    createBestPriceOrder(investApi, accountId, figi, -quantity, OrderDirection.ORDER_DIRECTION_BUY);
+                }
             }
             log.debug("Завершаем работу с инструментом в портфеле '{}'", figi);
         }
+        log.info("Завершение обработки активов в портфеле");
         return positions;
     }
 
@@ -224,7 +236,7 @@ public class InvestApiService {
         if (lastFigiPrices.length < 60) {
             log.warn("По инструменту недостаточно данных для работы, figi: '{}', получено свечей: '{}'",
                     figi, lastFigiPrices.length);
-            throw new RuntimeException("По инструменту недостаточно данных для работы");
+            return null;
         }
         return lastFigiPrices;
     }
@@ -233,6 +245,7 @@ public class InvestApiService {
      * Метод обрабатывает выставленные заявки и возвращает новый лист с заявками, которые не были исполнены
      */
     public List<OrderState> updateOrderStates(String accountId) {
+        log.info("Начало обработки созданных заявок");
         List<OrderState> orderStates = investApi.getOrdersService().getOrdersSync(accountId);
         for (OrderState orderState : orderStates) {
             String orderId = orderState.getOrderId();
@@ -244,11 +257,13 @@ public class InvestApiService {
             long quantity = orderState.getLotsRequested();
 
             double[] lastFigiPrices = getFigiLastPrices(figi);
+            if (lastFigiPrices == null){
+                continue; // переходим к следующей заявке orderState
+            }
             double[] predictPrices = advancedPredictionService.predictWithAdaptiveModel(lastFigiPrices, 10);
             TwoValues<Integer, Double>[] trends = new TwoValues[]{advancedPredictionService.getRiseTrendingValues(predictPrices),
                     advancedPredictionService.getFallTrendingValues(predictPrices)
             };
-
 
             if (orderDirection.equals(OrderDirection.ORDER_DIRECTION_BUY)) {
                 // заявка на покупку - если цена продолжает снижаться по прогнозу - понижаем целевую цену
@@ -282,10 +297,10 @@ public class InvestApiService {
             log.debug("Завершаем обрабатывать заявку '{}'", orderId);
         }
 
+        log.info("Завершение обработки созданных заявок");
         // возвращаем актуальный набор заявок
         return investApi.getOrdersService().getOrdersSync(accountId);
     }
-
 
     public static boolean isAccountHasNoMoney(InvestApi investApi, String accountId) {
         return !isAccountHasMoney(investApi, accountId);

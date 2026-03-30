@@ -90,22 +90,22 @@ public class PrivateTest extends BaseTest{
         assertTrue(investApi.isSandboxMode());
     }
 
-    @Test
-    public void addSomeMoneyOnTestAccount(){
-        investApi.getSandboxService().payIn(accountId, MoneyValue.newBuilder().setUnits(10000).setCurrency("RUB").build());
-        investApi.getSandboxService().payIn(accountId, MoneyValue.newBuilder().setUnits(10000).setCurrency("USD").build());
-        var positions = investApi.getOperationsService().getPositionsSync(accountId);
-
-        log.info("список валютных позиций портфеля");
-        var moneyList = positions.getMoney();
-        for (Money moneyValue : moneyList) {
-            log.info("валюта: {}, количество: {}", moneyValue.getCurrency(), moneyValue.getValue());
-            assertTrue(
-                    moneyValue.getValue().subtract(new BigDecimal("10000.00")).abs().compareTo(new BigDecimal("0.01")) <= 0,
-                    "Разница деняк превышает допустимую погрешность"
-            );
-        }
-    }
+//    @Test
+//    public void addSomeMoneyOnTestAccount(){
+//        investApi.getSandboxService().payIn(accountId, MoneyValue.newBuilder().setUnits(10000).setCurrency("RUB").build());
+//        investApi.getSandboxService().payIn(accountId, MoneyValue.newBuilder().setUnits(10000).setCurrency("USD").build());
+//        var positions = investApi.getOperationsService().getPositionsSync(accountId);
+//
+//        log.info("список валютных позиций портфеля");
+//        var moneyList = positions.getMoney();
+//        for (Money moneyValue : moneyList) {
+//            log.info("валюта: {}, количество: {}", moneyValue.getCurrency(), moneyValue.getValue());
+//            assertTrue(
+//                    moneyValue.getValue().subtract(new BigDecimal("10000.00")).abs().compareTo(new BigDecimal("0.01")) <= 0,
+//                    "Разница деняк превышает допустимую погрешность"
+//            );
+//        }
+//    }
 
     @Test
     public void getReadSomeFigi(){

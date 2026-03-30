@@ -32,4 +32,21 @@ public class User
     private Instant createDateTime;
     private UserStatus userStatus = UserStatus.NEW;
     private TradeStatus tradeStatus = TradeStatus.SANDBOX;
+    private AccountHistory accountHistory;
+
+    public void setPortfolioData(String portfolioData, Instant portfolioDate) {
+        if (getAccountHistory() == null){
+            setAccountHistory(new AccountHistory());
+        }
+        getAccountHistory().setPortfolioLastUpdateDate(portfolioDate);
+        getAccountHistory().setPortfolioData(portfolioData);
+    }
+
+    public void setAnalyticsData(String analyticsData, Instant analyticsDate) {
+        if (getAccountHistory() == null){
+            setAccountHistory(new AccountHistory());
+        }
+        getAccountHistory().setAnalyticsData(analyticsData);
+        getAccountHistory().setAnalyticsLastUpdateDate(analyticsDate);
+    }
 }

@@ -84,6 +84,6 @@ public class UserService {
                 + "\n Название основного счета: " + user.getMainAccountName()
                 + "\n Количество привязанных счетов: " + user.getAccounts().size()
                 + "\n Статус пользователя: " + user.getUserStatus()
-                + "\n Статус торговли бота: " + user.getTradeStatus();
+                + "\n Статус торговли бота: " + user.getTradeStatus().getLabel();
     }
 }

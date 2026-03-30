@@ -89,6 +89,15 @@ jacoco {
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
+
+    systemProperties = [
+//            'user.home': "C:\\Users\\temp_user",
+//            'java.io.tmpdir': "C:\\temp",
+            'file.encoding': 'UTF-8',
+            'user.language': 'en',
+//            'user.country': 'US',
+//            'jacoco-agent.destfile': layout.buildDirectory.file("jacoco/test.exec").get().asFile.path
+    ]
 }
 
 tasks.jacocoTestReport {

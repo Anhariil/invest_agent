@@ -43,8 +43,10 @@ public class OperationScheduler {
     }
 
     //время работы биржи в будни - 6.50/23.50 - надо проверить что все акции так и побольше узнать
+    // в выходные - с 10 до 19 (кроме праздников)
+    //TODO вынести проверку работоспособности биржи перед запуском шедуллера?
 //    @Scheduled(cron = "0 * 7-22 * * MON-FRI")
-    @Scheduled(fixedDelay = 2000) // для теста ставим так (2 сек)
+    @Scheduled(fixedDelay = 120_000) // для теста ставим так (2 мин)
     public void analysisMarket() throws InterruptedException {
         log.info("Начало работы analysisMarket");
 //        List<String> tokens = new ArrayList<>(users.size());
